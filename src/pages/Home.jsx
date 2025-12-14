@@ -50,7 +50,11 @@ const Home = () => {
             <div className="bg-github-bg-secondary border border-github-border rounded-lg p-8 text-center">
                 <h1 className="text-3xl font-bold text-github-text mb-4">Welcome to Kwpid Archives</h1>
                 <p className="text-github-text-secondary max-w-2xl mx-auto mb-6">
-                    A collection of my musical works, including fully produced tracks and written lyrics.
+                    A collection of songs written or recorded by me.
+                    <br />
+                    <span className="text-xs opacity-70">
+                        Note: most songs are not fully recorded, and songs with the "Time Taken" stat is accurate.
+                    </span>
                 </p>
                 <div className="flex justify-center gap-4">
                     <Link to="/archive/full" className="px-5 py-2 bg-github-accent hover:bg-github-accent-hover text-white rounded-md font-medium transition-colors">

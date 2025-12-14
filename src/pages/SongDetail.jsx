@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Disc, FileText, Music, Play, ExternalLink, Edit, Trash2, GitBranch, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, Disc, FileText, Music, Play, ExternalLink, Edit, Trash2, GitBranch, ArrowLeft, HelpCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthProvider';
 
@@ -164,8 +164,16 @@ const SongDetail = () => {
                             {sessionFile && (
                                 <li className="flex items-center gap-3 text-github-text bg-github-bg p-3 rounded border border-github-border/50">
                                     <GitBranch className="w-4 h-4 text-purple-400" />
-                                    <div>
-                                        <p className="text-xs text-github-text-secondary">Session File Available</p>
+                                    <div className="flex-grow">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-xs text-github-text-secondary">Session File Available</p>
+                                            <div className="group relative">
+                                                <HelpCircle className="w-3 h-3 text-github-text-secondary hover:text-github-text cursor-help" />
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 bg-github-bg-secondary border border-github-border text-xs text-github-text rounded shadow-xl hidden group-hover:block z-10 pointer-events-none group-hover:pointer-events-auto">
+                                                    Session files are longer versions of final tracks; usually having verses, hooks, bridges etc that didnt make the final cut.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <Link to={`/song/${sessionFile.id}`} className="text-sm font-bold text-github-accent-text hover:underline">
                                             View Session File
                                         </Link>
