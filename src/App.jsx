@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import AdminUpload from './pages/AdminUpload';
 import AdminEdit from './pages/AdminEdit';
+import Settings from './pages/Settings';
 import { AuthProvider } from './contexts/AuthProvider';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
             <Route path="signup" element={<SignUp />} />
             <Route path="upload" element={<AdminUpload />} />
             <Route path="edit/:id" element={<AdminEdit />} />
+            <Route path="settings" element={<Settings />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

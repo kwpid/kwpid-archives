@@ -34,6 +34,7 @@ const MainLayout = () => {
                             <NavLink to="/" active={isActive('/')}>Dashboard</NavLink>
                             <NavLink to="/archive/full" active={isActive('/archive/full')}>Full Songs</NavLink>
                             <NavLink to="/archive/written" active={isActive('/archive/written')}>Written</NavLink>
+                            <NavLink to="/settings" active={isActive('/settings')}>Settings</NavLink>
 
                             {isAdmin && (
                                 <Link
@@ -79,6 +80,7 @@ const MainLayout = () => {
                             <MobileNavLink to="/" onClick={toggleMenu}>Dashboard</MobileNavLink>
                             <MobileNavLink to="/archive/full" onClick={toggleMenu}>Full Songs</MobileNavLink>
                             <MobileNavLink to="/archive/written" onClick={toggleMenu}>Written</MobileNavLink>
+                            <MobileNavLink to="/settings" onClick={toggleMenu}>Settings</MobileNavLink>
 
                             {isAdmin && (
                                 <MobileNavLink to="/upload" onClick={toggleMenu} className="text-github-accent-text">
