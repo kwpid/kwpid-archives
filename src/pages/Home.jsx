@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase';
 
 const formatDate = (dateString) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(`${dateString}T12:00:00`);
+    return date.toLocaleDateString('en-US', {
         month: '2-digit',
         day: '2-digit',
         year: 'numeric'

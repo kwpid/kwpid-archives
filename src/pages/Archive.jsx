@@ -5,7 +5,8 @@ import { Music, Calendar, Clock, ArrowUpDown, ArrowUp, ArrowDown, Search } from 
 
 const formatDate = (dateString) => {
     if (!dateString) return 'Unknown Date';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(`${dateString}T12:00:00`);
+    return date.toLocaleDateString('en-US', {
         month: '2-digit',
         day: '2-digit',
         year: 'numeric'
@@ -29,7 +30,7 @@ const Archive = () => {
     const dbCategory = isFull ? 'Full' : 'Written';
 
     const displayTitle = isFull ? 'Full Songs' : 'Written Works';
-    const subCategories = isFull ? ['Released', 'Unreleased', 'Demos', 'Sessions'] : [];
+    const subCategories = isFull ? ['Released', 'Unreleased', 'Demos'] : []; // Removed Sessions from filter bar
 
     useEffect(() => {
         const fetchSongs = async () => {
@@ -37,7 +38,8 @@ const Archive = () => {
             let query = supabase
                 .from('songs')
                 .select('*')
-                .eq('category', dbCategory);
+                .eq('category', dbCategory)
+                .neq('sub_category', 'Sessions'); // Exclude sessions from archive
 
             const { data, error } = await query;
 

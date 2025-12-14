@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Calendar, Clock, Disc, FileText, Music, Play, ExternalLink, Edit } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Calendar, Clock, Disc, FileText, Music, Play, ExternalLink, Edit, Trash2, GitBranch, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthProvider';
 
 const formatDate = (dateString) => {
     if (!dateString) return 'Unknown Date';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Append T12:00:00 to ensure it falls in the middle of the day, avoiding timezone issues
+    const date = new Date(`${dateString}T12:00:00`);
+    return date.toLocaleDateString('en-US', {
         month: '2-digit',
         day: '2-digit',
         year: 'numeric'
@@ -16,13 +18,19 @@ const formatDate = (dateString) => {
 const SongDetail = () => {
     const { id } = useParams();
     const { isAdmin } = useAuth();
+    const navigate = useNavigate();
     const [song, setSong] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [sessionFile, setSessionFile] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         const fetchSong = async () => {
             setLoading(true);
-            const { data, error } = await supabase
+            setSessionFile(null); // Reset session file
+
+            // 1. Fetch current song
+            const { data: currentSong, error } = await supabase
                 .from('songs')
                 .select('*')
                 .eq('id', id)
@@ -30,8 +38,25 @@ const SongDetail = () => {
 
             if (error) {
                 console.error('Error fetching song:', error);
-            } else if (data) {
-                setSong(data);
+            } else if (currentSong) {
+                setSong(currentSong);
+
+                // 2. Logic to find related session file
+                // If this is a parent, find its child session
+                // If this is a session, currentSong.parent_id will exist (handled in render)
+
+                // Try to find a child session file
+                const { data: childSession } = await supabase
+                    .from('songs')
+                    .select('*')
+                    .eq('parent_id', currentSong.id)
+                    .eq('sub_category', 'Sessions') // ensure it's a session
+                    .limit(1)
+                    .single();
+
+                if (childSession) {
+                    setSessionFile(childSession);
+                }
             }
             setLoading(false);
         };
@@ -41,13 +66,39 @@ const SongDetail = () => {
         }
     }, [id]);
 
+    const handleDelete = async () => {
+        if (!confirm('Are you sure you want to DELETE this song? This action cannot be undone.')) return;
+
+        setIsDeleting(true);
+        const { error } = await supabase.from('songs').delete().eq('id', id);
+
+        if (error) {
+            alert('Error deleting song: ' + error.message);
+            setIsDeleting(false);
+        } else {
+            alert('Song deleted.');
+            navigate('/');
+        }
+    };
+
     if (loading) return <div className="p-8 text-center text-github-text-secondary">Loading song details...</div>;
     if (!song) return <div className="p-8 text-center text-github-text-secondary">Song not found.</div>;
+
+    const isSession = song.sub_category === 'Sessions';
 
     return (
         <div>
             {/* Header / Hero */}
             <div className="relative mb-8">
+                {/* Back Link for Session Files */}
+                {isSession && song.parent_id && (
+                    <div className="mb-4">
+                        <Link to={`/song/${song.parent_id}`} className="inline-flex items-center gap-2 text-github-text-secondary hover:text-github-accent-text text-sm mb-2">
+                            <ArrowLeft className="w-4 h-4" /> Back to Original Song
+                        </Link>
+                    </div>
+                )}
+
                 <div className="flex flex-col md:flex-row gap-6 items-end">
                     <div className="w-48 h-48 bg-github-bg-secondary border border-github-border rounded-lg shadow-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
                         {song.image_url ? (
@@ -59,13 +110,31 @@ const SongDetail = () => {
                     <div className="flex-grow pb-2">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-github-accent text-white uppercase tracking-wider">{song.sub_category || song.category}</span>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${isSession ? 'bg-purple-600 text-white' : 'bg-github-accent text-white'}`}>
+                                    {song.sub_category || song.category}
+                                </span>
                                 {song.version_number && <span className="text-xs text-github-text-secondary">v{song.version_number}</span>}
                             </div>
+
+                            {/* Admin Controls */}
                             {isAdmin && (
-                                <Link to={`/edit/${id}`} className="flex items-center gap-2 px-3 py-1 bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors text-sm">
-                                    <Edit className="w-4 h-4" /> Edit Song
-                                </Link>
+                                <div className="flex gap-2">
+                                    {!isSession && !sessionFile && (
+                                        <Link to={`/upload?mode=session&source=${id}`} className="flex items-center gap-2 px-3 py-1 bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors text-sm" title="Create Session File">
+                                            <GitBranch className="w-4 h-4" /> <span className="hidden sm:inline">Create Session</span>
+                                        </Link>
+                                    )}
+                                    <Link to={`/edit/${id}`} className="flex items-center gap-2 px-3 py-1 bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors text-sm">
+                                        <Edit className="w-4 h-4" /> <span className="hidden sm:inline">Edit</span>
+                                    </Link>
+                                    <button
+                                        onClick={handleDelete}
+                                        disabled={isDeleting}
+                                        className="flex items-center gap-2 px-3 py-1 bg-red-900/30 border border-red-900/50 text-red-500 rounded hover:bg-red-900/50 transition-colors text-sm"
+                                    >
+                                        <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Delete</span>
+                                    </button>
+                                </div>
                             )}
                         </div>
 
@@ -91,6 +160,19 @@ const SongDetail = () => {
                     <div className="bg-github-bg-secondary border border-github-border rounded-lg p-5">
                         <h3 className="text-sm font-bold text-github-text-secondary uppercase tracking-wider mb-4">Track Info</h3>
                         <ul className="space-y-4">
+                            {/* Session File Link */}
+                            {sessionFile && (
+                                <li className="flex items-center gap-3 text-github-text bg-github-bg p-3 rounded border border-github-border/50">
+                                    <GitBranch className="w-4 h-4 text-purple-400" />
+                                    <div>
+                                        <p className="text-xs text-github-text-secondary">Session File Available</p>
+                                        <Link to={`/song/${sessionFile.id}`} className="text-sm font-bold text-github-accent-text hover:underline">
+                                            View Session File
+                                        </Link>
+                                    </div>
+                                </li>
+                            )}
+
                             <li className="flex items-center gap-3 text-github-text">
                                 <Calendar className="w-4 h-4 text-github-accent-text" />
                                 <div>

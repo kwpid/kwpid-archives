@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthProvider';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 const AdminUpload = () => {
     const { isAdmin } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [imageFile, setImageFile] = useState(null);
+
+    // Check if we are in "Create Session" mode
+    const mode = searchParams.get('mode'); // 'session'
+    const sourceId = searchParams.get('source');
 
     const [formData, setFormData] = useState({
         title: '',
@@ -19,7 +24,37 @@ const AdminUpload = () => {
         beat_link: '',
         description: '',
         time_taken: '',
+        parent_id: null,
+        image_url: '' // To hold the parent image URL if copying
     });
+
+    // Fetch parent song data if in session mode
+    useEffect(() => {
+        const fetchParent = async () => {
+            if (mode === 'session' && sourceId) {
+                setLoading(true);
+                const { data, error } = await supabase.from('songs').select('*').eq('id', sourceId).single();
+                if (data) {
+                    setFormData(prev => ({
+                        ...prev,
+                        title: `${data.title} (Session)`,
+                        category: data.category,
+                        sub_category: 'Sessions', // Force to Sessions
+                        lyrics: data.lyrics,
+                        date_written: data.date_written,
+                        version_number: data.version_number,
+                        beat_link: data.beat_link,
+                        description: `Session file for ${data.title}`,
+                        time_taken: data.time_taken,
+                        parent_id: data.id,
+                        image_url: data.image_url
+                    }));
+                }
+                setLoading(false);
+            }
+        };
+        fetchParent();
+    }, [mode, sourceId]);
 
     // Enforce Written -> Demo logic
     useEffect(() => {
@@ -64,7 +99,7 @@ const AdminUpload = () => {
         setLoading(true);
 
         try {
-            let imageUrl = '';
+            let imageUrl = formData.image_url;
 
             if (imageFile) {
                 imageUrl = await uploadImage(imageFile);
@@ -84,7 +119,11 @@ const AdminUpload = () => {
             if (error) throw error;
 
             alert('Song uploaded successfully!');
-            navigate('/');
+            if (mode === 'session' && sourceId) {
+                navigate(`/song/${sourceId}`); // Go back to parent
+            } else {
+                navigate('/');
+            }
         } catch (error) {
             alert('Error uploading song: ' + error.message);
             console.error(error);
@@ -103,10 +142,13 @@ const AdminUpload = () => {
     }
 
     const isWritten = formData.category === 'Written';
+    const isSessionMode = mode === 'session';
 
     return (
         <div className="max-w-2xl mx-auto">
-            <h1 className="text-2xl font-bold text-github-text mb-6">Upload New Song</h1>
+            <h1 className="text-2xl font-bold text-github-text mb-6">
+                {isSessionMode ? 'Create Session File' : 'Upload New Song'}
+            </h1>
             <form onSubmit={handleSubmit} className="space-y-6 bg-github-bg-secondary border border-github-border p-6 rounded-lg">
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -136,12 +178,18 @@ const AdminUpload = () => {
                                 disabled
                                 className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text-secondary opacity-70 cursor-not-allowed"
                             />
+                        ) : isSessionMode ? (
+                            <input
+                                value="Sessions (Locked)"
+                                disabled
+                                className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text-secondary opacity-70 cursor-not-allowed"
+                            />
                         ) : (
                             <select name="sub_category" value={formData.sub_category} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text">
                                 <option value="Released">Released</option>
                                 <option value="Unreleased">Unreleased</option>
                                 <option value="Demos">Demos</option>
-                                <option value="Sessions">Sessions</option>
+                                {/* Removed 'Sessions' from manual selection to enforce workflow */}
                             </select>
                         )}
                         {isWritten && <p className="text-xs text-github-text-secondary mt-1">Written songs are automatically categorized as Demos.</p>}
@@ -176,6 +224,11 @@ const AdminUpload = () => {
 
                 <div>
                     <label className="block text-sm font-medium text-github-text-secondary mb-1">Cover Image {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                    {isSessionMode && formData.image_url && (
+                        <div className="mb-2">
+                            <span className="text-xs text-github-text-secondary">Inherited from parent (optional to change)</span>
+                        </div>
+                    )}
                     <input
                         type="file"
                         accept="image/*"
