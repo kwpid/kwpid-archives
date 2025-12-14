@@ -78,7 +78,13 @@ const Settings = () => {
 
     const generateLyricsList = () => {
         let result = '';
-        songs.forEach((song, index) => {
+
+        // Filter: Only "Full" songs and "Sessions"
+        const backupSongs = songs.filter(s =>
+            s.category === 'Full' || s.sub_category === 'Sessions'
+        );
+
+        backupSongs.forEach((song, index) => {
             const date = formatDate(song.date_written || song.created_at);
 
             result += `${index + 1}.\n`;
@@ -172,8 +178,8 @@ const Settings = () => {
                                 Full Backup (With Lyrics)
                             </h2>
                             <p className="text-github-text-secondary text-sm mt-1">
-                                Copies raw data for ALL songs (including sessions) with full lyrics.
-                                Useful for local backups.
+                                Copies raw data for Full songs and Sessions (with lyrics).
+                                Excludes Written works.
                             </p>
                         </div>
                     </div>
