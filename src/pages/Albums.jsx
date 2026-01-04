@@ -440,17 +440,20 @@ const AlbumCard = ({ album, onEdit, onDelete, onAssign, onCreateDeluxe, onCreate
         fetchTracks();
 
         // Fetch parent album if this is a deluxe/anniversary version
-        if (album.parent_album_id) {
-            const { data: parent } = await supabase
-                .from('albums')
-                .select('name')
-                .eq('id', album.parent_album_id)
-                .single();
-            
-            if (parent) {
-                setParentAlbum(parent);
+        const fetchParentAlbum = async () => {
+            if (album.parent_album_id) {
+                const { data: parent } = await supabase
+                    .from('albums')
+                    .select('name')
+                    .eq('id', album.parent_album_id)
+                    .single();
+                
+                if (parent) {
+                    setParentAlbum(parent);
+                }
             }
-        }
+        };
+        fetchParentAlbum();
     }, [album.id, album.parent_album_id]);
 
     const formatDate = (dateString) => {
