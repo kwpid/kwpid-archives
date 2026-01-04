@@ -21,6 +21,7 @@ const AdminEdit = () => {
         beat_link: '',
         description: '',
         time_taken: '',
+        producer: '',
         image_url: ''
     });
 
@@ -48,6 +49,7 @@ const AdminEdit = () => {
                     beat_link: data.beat_link || '',
                     description: data.description || '',
                     time_taken: data.time_taken || '',
+                    producer: data.producer || '',
                     image_url: data.image_url || ''
                 });
             }
@@ -214,6 +216,12 @@ const AdminEdit = () => {
                 <div>
                     <label className="block text-sm font-medium text-github-text-secondary mb-1">Beat Link (URL) {isWritten && <span className="text-xs">(Optional)</span>}</label>
                     <input name="beat_link" value={formData.beat_link} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Producer {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                    <input name="producer" value={formData.producer} onChange={handleChange} placeholder="e.g. aura" className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
+                    <p className="mt-1 text-xs text-github-text-secondary">Will be formatted as "prod. [name]" in displays</p>
                 </div>
 
                 <div>

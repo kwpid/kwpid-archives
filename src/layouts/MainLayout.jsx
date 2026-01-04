@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Music, FileText, Menu, X, User, Upload, LogOut } from 'lucide-react';
+import { Music, FileText, Menu, X, User, Upload, LogOut, Disc } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
 import { useAuth } from '../contexts/AuthProvider';
@@ -37,15 +37,26 @@ const MainLayout = () => {
                             <NavLink to="/settings" active={isActive('/settings')}>Settings</NavLink>
 
                             {isAdmin && (
-                                <Link
-                                    to="/upload"
-                                    className={clsx(
-                                        "flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                                        isActive('/upload') ? "bg-github-accent text-white" : "text-github-accent-text hover:bg-github-border"
-                                    )}
-                                >
-                                    <Upload className="w-4 h-4" /> Upload
-                                </Link>
+                                <>
+                                    <Link
+                                        to="/albums"
+                                        className={clsx(
+                                            "flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                                            isActive('/albums') ? "bg-github-accent text-white" : "text-github-accent-text hover:bg-github-border"
+                                        )}
+                                    >
+                                        <Disc className="w-4 h-4" /> Albums
+                                    </Link>
+                                    <Link
+                                        to="/upload"
+                                        className={clsx(
+                                            "flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                                            isActive('/upload') ? "bg-github-accent text-white" : "text-github-accent-text hover:bg-github-border"
+                                        )}
+                                    >
+                                        <Upload className="w-4 h-4" /> Upload
+                                    </Link>
+                                </>
                             )}
 
                             {user ? (
@@ -83,9 +94,14 @@ const MainLayout = () => {
                             <MobileNavLink to="/settings" onClick={toggleMenu}>Settings</MobileNavLink>
 
                             {isAdmin && (
-                                <MobileNavLink to="/upload" onClick={toggleMenu} className="text-github-accent-text">
-                                    + Upload Song
-                                </MobileNavLink>
+                                <>
+                                    <MobileNavLink to="/albums" onClick={toggleMenu} className="text-github-accent-text">
+                                        Albums
+                                    </MobileNavLink>
+                                    <MobileNavLink to="/upload" onClick={toggleMenu} className="text-github-accent-text">
+                                        + Upload Song
+                                    </MobileNavLink>
+                                </>
                             )}
 
                             {user ? (

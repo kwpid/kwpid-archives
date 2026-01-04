@@ -24,6 +24,7 @@ const AdminUpload = () => {
         beat_link: '',
         description: '',
         time_taken: '',
+        producer: '',
         parent_id: null,
         image_url: '' // To hold the parent image URL if copying
     });
@@ -220,6 +221,12 @@ const AdminUpload = () => {
                 <div>
                     <label className="block text-sm font-medium text-github-text-secondary mb-1">Beat Link (URL) {isWritten && <span className="text-xs">(Optional)</span>}</label>
                     <input name="beat_link" value={formData.beat_link} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Producer {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                    <input name="producer" value={formData.producer} onChange={handleChange} placeholder="e.g. aura" className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
+                    <p className="mt-1 text-xs text-github-text-secondary">Will be formatted as "prod. [name]" in displays</p>
                 </div>
 
                 <div>

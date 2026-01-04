@@ -23,6 +23,7 @@ const SongDetail = () => {
     const [loading, setLoading] = useState(true);
     const [sessionFile, setSessionFile] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [album, setAlbum] = useState(null);
 
     useEffect(() => {
         const fetchSong = async () => {
@@ -56,6 +57,26 @@ const SongDetail = () => {
 
                 if (childSession) {
                     setSessionFile(childSession);
+                }
+
+                // Fetch album information if this song is on an album
+                const { data: albumTrack } = await supabase
+                    .from('album_tracks')
+                    .select('album_id')
+                    .eq('song_id', currentSong.id)
+                    .limit(1)
+                    .single();
+
+                if (albumTrack) {
+                    const { data: albumData } = await supabase
+                        .from('albums')
+                        .select('*')
+                        .eq('id', albumTrack.album_id)
+                        .single();
+
+                    if (albumData) {
+                        setAlbum(albumData);
+                    }
                 }
             }
             setLoading(false);
@@ -205,6 +226,24 @@ const SongDetail = () => {
                                         <a href={song.beat_link} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-github-accent-text hover:underline flex items-center gap-1">
                                             Listen to Beat <ExternalLink className="w-3 h-3" />
                                         </a>
+                                    </div>
+                                </li>
+                            )}
+                            {song.producer && (
+                                <li className="flex items-center gap-3 text-github-text">
+                                    <Music className="w-4 h-4 text-github-accent-text" />
+                                    <div>
+                                        <p className="text-xs text-github-text-secondary">Producer</p>
+                                        <p className="text-sm font-medium">prod. {song.producer}</p>
+                                    </div>
+                                </li>
+                            )}
+                            {album && (
+                                <li className="flex items-center gap-3 text-github-text">
+                                    <Disc className="w-4 h-4 text-github-accent-text" />
+                                    <div>
+                                        <p className="text-xs text-github-text-secondary">Album</p>
+                                        <p className="text-sm font-medium">{album.name}</p>
                                     </div>
                                 </li>
                             )}

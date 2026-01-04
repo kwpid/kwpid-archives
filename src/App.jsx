@@ -9,6 +9,7 @@ import SignUp from './pages/SignUp';
 import AdminUpload from './pages/AdminUpload';
 import AdminEdit from './pages/AdminEdit';
 import Settings from './pages/Settings';
+import Albums from './pages/Albums';
 import { AuthProvider } from './contexts/AuthProvider';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
             <Route path="upload" element={<AdminUpload />} />
             <Route path="edit/:id" element={<AdminEdit />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="albums" element={<Albums />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
