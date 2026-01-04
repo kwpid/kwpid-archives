@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Disc, Music } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { getSongDisplayImage, createSongToAlbumMap } from '../lib/songImageUtils';
 
 const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -16,6 +17,7 @@ const formatDate = (dateString) => {
 const Home = () => {
     const [latestReleases, setLatestReleases] = useState([]);
     const [counts, setCounts] = useState({ full: 0, written: 0 });
+    const [albumTracks, setAlbumTracks] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -27,8 +29,23 @@ const Home = () => {
                 .order('created_at', { ascending: false })
                 .limit(3);
 
+            // Fetch album tracks for cover art
+            const { data: tracksData } = await supabase
+                .from('album_tracks')
+                .select('song_id, albums(id, cover_image_url)');
+
+            if (tracksData) {
+                setAlbumTracks(tracksData);
+            }
+
             if (latestData) {
-                setLatestReleases(latestData);
+                // Map songs with album cover art
+                const songToAlbumMap = createSongToAlbumMap(tracksData || []);
+                const songsWithImages = latestData.map(song => ({
+                    ...song,
+                    displayImage: getSongDisplayImage(song, songToAlbumMap)
+                }));
+                setLatestReleases(songsWithImages);
             }
 
             // Fetch counts (approximate)
@@ -88,8 +105,8 @@ const Home = () => {
                                 >
                                     <div className="flex gap-3 items-center">
                                         <div className="w-12 h-12 bg-github-bg-secondary flex-shrink-0 rounded overflow-hidden border border-github-border flex items-center justify-center">
-                                            {song.image_url ? (
-                                                <img src={song.image_url} alt={song.title} className="w-full h-full object-cover" />
+                                            {song.displayImage ? (
+                                                <img src={song.displayImage} alt={song.title} className="w-full h-full object-cover" />
                                             ) : (
                                                 <Music className="w-6 h-6 text-github-text-secondary opacity-50" />
                                             )}

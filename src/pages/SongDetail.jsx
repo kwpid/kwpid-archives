@@ -4,6 +4,7 @@ import { Calendar, Clock, Disc, FileText, Music, Play, ExternalLink, Edit, Trash
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthProvider';
 import { getSongEra } from '../lib/eraUtils';
+import { getSongDisplayImage } from '../lib/songImageUtils';
 
 const formatDate = (dateString) => {
     if (!dateString) return 'Unknown Date';
@@ -27,6 +28,7 @@ const SongDetail = () => {
     const [album, setAlbum] = useState(null);
     const [albums, setAlbums] = useState([]);
     const [era, setEra] = useState(null);
+    const [displayImage, setDisplayImage] = useState(null);
 
     useEffect(() => {
         const fetchSong = async () => {
@@ -78,21 +80,19 @@ const SongDetail = () => {
                 // Fetch album information if this song is on an album
                 const { data: albumTrack } = await supabase
                     .from('album_tracks')
-                    .select('album_id')
+                    .select('album_id, albums(id, cover_image_url, name)')
                     .eq('song_id', currentSong.id)
                     .limit(1)
-                    .single();
+                    .maybeSingle();
 
-                if (albumTrack) {
-                    const { data: albumData } = await supabase
-                        .from('albums')
-                        .select('*')
-                        .eq('id', albumTrack.album_id)
-                        .single();
-
-                    if (albumData) {
-                        setAlbum(albumData);
-                    }
+                if (albumTrack && albumTrack.albums) {
+                    const albumData = albumTrack.albums;
+                    setAlbum({ id: albumData.id, name: albumData.name, cover_image_url: albumData.cover_image_url });
+                    // Use album cover art for display (regardless of song's own image)
+                    setDisplayImage(albumData.cover_image_url || currentSong.image_url);
+                } else {
+                    // No album, use song's own image
+                    setDisplayImage(currentSong.image_url);
                 }
             }
             setLoading(false);
@@ -138,8 +138,8 @@ const SongDetail = () => {
 
                 <div className="flex flex-col md:flex-row gap-6 items-end">
                     <div className="w-48 h-48 bg-github-bg-secondary border border-github-border rounded-lg shadow-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
-                        {song.image_url ? (
-                            <img src={song.image_url} alt={song.title} className="w-full h-full object-cover" />
+                        {displayImage ? (
+                            <img src={displayImage} alt={song.title} className="w-full h-full object-cover" />
                         ) : (
                             <Music className="w-16 h-16 text-github-text-secondary" />
                         )}

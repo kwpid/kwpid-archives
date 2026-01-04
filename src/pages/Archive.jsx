@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getSongEra } from '../lib/eraUtils';
+import { getSongDisplayImage, createSongToAlbumMap } from '../lib/songImageUtils';
 import { Music, Calendar, Clock, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
 
 const formatDate = (dateString) => {
@@ -18,6 +19,7 @@ const Archive = () => {
     const { category } = useParams(); // 'full' or 'written'
     const [songs, setSongs] = useState([]);
     const [albums, setAlbums] = useState([]);
+    const [albumTracks, setAlbumTracks] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Filters & Search
@@ -54,7 +56,7 @@ const Archive = () => {
                 setSongs(songsData || []);
             }
 
-            // Fetch albums (for era calculation)
+            // Fetch albums (for era calculation and cover art)
             if (isFull) {
                 const { data: albumsData, error: albumsError } = await supabase
                     .from('albums')
@@ -64,6 +66,17 @@ const Archive = () => {
                     console.error('Error fetching albums:', albumsError);
                 } else {
                     setAlbums(albumsData || []);
+                }
+
+                // Fetch album tracks to map songs to albums
+                const { data: tracksData, error: tracksError } = await supabase
+                    .from('album_tracks')
+                    .select('song_id, albums(id, cover_image_url)');
+
+                if (tracksError) {
+                    console.error('Error fetching album tracks:', tracksError);
+                } else {
+                    setAlbumTracks(tracksData || []);
                 }
             }
 
@@ -92,6 +105,9 @@ const Archive = () => {
         return sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-github-accent" /> : <ArrowDown className="w-3 h-3 text-github-accent" />;
     };
 
+    // Create song to album map for cover art
+    const songToAlbumMap = isFull ? createSongToAlbumMap(albumTracks) : {};
+
     // Get all unique eras for the dropdown (Full songs only)
     const availableEras = isFull ? [...new Set(songs.map(song => {
         const era = getSongEra(song, albums);
@@ -102,7 +118,8 @@ const Archive = () => {
     const filteredAndSortedSongs = songs
         .map(song => ({
             ...song,
-            era: isFull ? getSongEra(song, albums) : null
+            era: isFull ? getSongEra(song, albums) : null,
+            displayImage: getSongDisplayImage(song, songToAlbumMap)
         }))
         .filter(song => {
             const matchesCategory = filter === 'All' || song.sub_category === filter;
@@ -241,8 +258,8 @@ const Archive = () => {
                                 {/* Icon/Image */}
                                 <div className="col-span-1 flex justify-center">
                                     <div className="w-8 h-8 rounded bg-github-bg border border-github-border flex items-center justify-center overflow-hidden">
-                                        {song.image_url ? (
-                                            <img src={song.image_url} alt="" className="w-full h-full object-cover" />
+                                        {song.displayImage ? (
+                                            <img src={song.displayImage} alt="" className="w-full h-full object-cover" />
                                         ) : (
                                             <Music className="w-4 h-4 text-github-text-secondary" />
                                         )}
