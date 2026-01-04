@@ -226,19 +226,19 @@ const Archive = () => {
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-4 p-4 border-b border-github-border bg-github-bg text-xs font-bold text-github-text-secondary uppercase tracking-wider">
                     <div className="col-span-1 text-center">Icon</div>
-                    <div className="col-span-4 md:col-span-4 cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('title')}>
+                    <div className={`${isFull ? 'col-span-5 md:col-span-3' : 'col-span-4 md:col-span-4'} cursor-pointer select-none flex items-center gap-1 hover:text-github-text`} onClick={() => handleSort('title')}>
                         Name {getSortIcon('title')}
                     </div>
-                    <div className="col-span-3 md:col-span-2 cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('date_written')}>
+                    <div className={`${isFull ? 'col-span-3 md:col-span-2' : 'col-span-3 md:col-span-2'} cursor-pointer select-none flex items-center gap-1 hover:text-github-text`} onClick={() => handleSort('date_written')}>
                         Date {getSortIcon('date_written')}
                     </div>
                     {isFull && (
-                        <div className="col-span-2 hidden md:block cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('era')}>
+                        <div className="col-span-0 md:col-span-2 hidden md:block cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('era')}>
                             Era {getSortIcon('era')}
                         </div>
                     )}
-                    <div className="col-span-2 hidden md:block">Status</div>
-                    <div className="col-span-2 md:col-span-2 text-right">Details</div>
+                    <div className="col-span-0 md:col-span-2 hidden md:block">Status</div>
+                    <div className={`${isFull ? 'col-span-3 md:col-span-2' : 'col-span-4 md:col-span-3'} text-right`}>Details</div>
                 </div>
 
                 {/* Table Body */}
@@ -266,24 +266,24 @@ const Archive = () => {
                                 </div>
 
                                 {/* Name */}
-                                <div className="col-span-4 md:col-span-3 font-medium text-github-text truncate group-hover:text-github-accent-text group-hover:underline">
+                                <div className={`${isFull ? 'col-span-5 md:col-span-3' : 'col-span-4 md:col-span-4'} font-medium text-github-text truncate group-hover:text-github-accent-text group-hover:underline`}>
                                     {song.title}
                                 </div>
 
                                 {/* Date */}
-                                <div className="col-span-3 md:col-span-2 text-github-text-secondary font-mono text-xs">
+                                <div className={`${isFull ? 'col-span-3 md:col-span-2' : 'col-span-3 md:col-span-2'} text-github-text-secondary font-mono text-xs`}>
                                     {formatDate(song.date_written || song.created_at)}
                                 </div>
 
                                 {/* Era (Full songs only, hidden on mobile) */}
                                 {isFull && (
-                                    <div className="col-span-2 hidden md:block text-github-text-secondary text-xs">
+                                    <div className="col-span-0 md:col-span-2 hidden md:block text-github-text-secondary text-xs">
                                         {song.era || '-'}
                                     </div>
                                 )}
 
                                 {/* Status/Category (Hidden on mobile) */}
-                                <div className="col-span-2 hidden md:block">
+                                <div className="col-span-0 md:col-span-2 hidden md:block">
                                     {song.sub_category && (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-github-border text-github-text">
                                             {song.sub_category}
@@ -292,7 +292,7 @@ const Archive = () => {
                                 </div>
 
                                 {/* Link Icon */}
-                                <div className="col-span-2 text-right">
+                                <div className={`${isFull ? 'col-span-3 md:col-span-2' : 'col-span-4 md:col-span-3'} text-right`}>
                                     <span className="text-github-accent-text text-xs hover:underline hidden sm:inline">View</span>
                                 </div>
                             </Link>
