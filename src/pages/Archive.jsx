@@ -226,7 +226,7 @@ const Archive = () => {
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-4 p-4 border-b border-github-border bg-github-bg text-xs font-bold text-github-text-secondary uppercase tracking-wider">
                     <div className="col-span-1 text-center">Icon</div>
-                    <div className="col-span-4 md:col-span-3 cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('title')}>
+                    <div className="col-span-4 md:col-span-4 cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('title')}>
                         Name {getSortIcon('title')}
                     </div>
                     <div className="col-span-3 md:col-span-2 cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('date_written')}>
@@ -237,7 +237,6 @@ const Archive = () => {
                             Era {getSortIcon('era')}
                         </div>
                     )}
-                    <div className={`col-span-2 ${isFull ? 'hidden' : ''} md:block`}>Description</div>
                     <div className="col-span-2 hidden md:block">Status</div>
                     <div className="col-span-2 md:col-span-2 text-right">Details</div>
                 </div>
@@ -280,13 +279,6 @@ const Archive = () => {
                                 {isFull && (
                                     <div className="col-span-2 hidden md:block text-github-text-secondary text-xs">
                                         {song.era || '-'}
-                                    </div>
-                                )}
-
-                                {/* Description (Hidden on mobile, only for written) */}
-                                {!isFull && (
-                                    <div className="col-span-2 hidden md:block text-github-text-secondary truncate text-xs">
-                                        {song.description || '-'}
                                     </div>
                                 )}
 

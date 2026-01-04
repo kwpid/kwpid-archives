@@ -132,9 +132,20 @@ const AlbumDetail = () => {
                                 </p>
                             )}
                             <h1 className="text-4xl md:text-5xl font-extrabold text-github-text tracking-tight mb-2">{album.name}</h1>
-                            <p className="text-github-text-secondary">
-                                Released: {formatDate(album.release_date)}
-                            </p>
+                            <div className="flex items-center gap-3">
+                                <p className="text-github-text-secondary">
+                                    Release Date: {formatDate(album.release_date)}
+                                </p>
+                                {album.status && (
+                                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${
+                                        album.status === 'Released' 
+                                            ? 'bg-green-600 text-white' 
+                                            : 'bg-github-border text-github-text-secondary'
+                                    }`}>
+                                        {album.status}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {/* Admin Controls */}

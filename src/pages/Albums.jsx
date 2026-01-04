@@ -23,7 +23,8 @@ const Albums = () => {
         release_date: '',
         cover_image_url: '',
         album_type: 'standard',
-        parent_album_id: null
+        parent_album_id: null,
+        status: 'Unreleased'
     });
 
     useEffect(() => {
@@ -99,7 +100,8 @@ const Albums = () => {
                     release_date: formData.release_date,
                     cover_image_url: imageUrl || null,
                     album_type: formData.album_type,
-                    parent_album_id: formData.parent_album_id || null
+                    parent_album_id: formData.parent_album_id || null,
+                    status: formData.status || 'Unreleased'
                 }])
                 .select()
                 .single();
@@ -131,7 +133,7 @@ const Albums = () => {
             alert('Album created successfully!');
             setShowCreateModal(false);
             setShowCreateVersionModal(false);
-            setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null });
+            setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased' });
             setImageFile(null);
             setSelectedAlbum(null);
             fetchAlbums();
@@ -163,9 +165,29 @@ const Albums = () => {
                     release_date: formData.release_date,
                     cover_image_url: imageUrl || null,
                     album_type: formData.album_type,
-                    parent_album_id: formData.parent_album_id || null
+                    parent_album_id: formData.parent_album_id || null,
+                    status: formData.status || 'Unreleased'
                 })
                 .eq('id', selectedAlbum.id);
+
+            // If album status changed to "Released", update all songs in the album
+            if (formData.status === 'Released' && selectedAlbum.status !== 'Released') {
+                // Get all song IDs in this album
+                const { data: albumTracks } = await supabase
+                    .from('album_tracks')
+                    .select('song_id')
+                    .eq('album_id', selectedAlbum.id);
+
+                if (albumTracks && albumTracks.length > 0) {
+                    const songIds = albumTracks.map(track => track.song_id);
+                    
+                    // Update all songs to "Released" status
+                    await supabase
+                        .from('songs')
+                        .update({ sub_category: 'Released' })
+                        .in('id', songIds);
+                }
+            }
 
             if (error) throw error;
 
@@ -206,7 +228,8 @@ const Albums = () => {
             release_date: album.release_date,
             cover_image_url: album.cover_image_url || '',
             album_type: album.album_type || 'standard',
-            parent_album_id: album.parent_album_id || null
+            parent_album_id: album.parent_album_id || null,
+            status: album.status || 'Unreleased'
         });
         setImageFile(null);
         setShowEditModal(true);
@@ -223,7 +246,8 @@ const Albums = () => {
             release_date: '',
             cover_image_url: album.cover_image_url || '',
             album_type: versionType,
-            parent_album_id: album.id
+            parent_album_id: album.id,
+            status: 'Unreleased'
         });
         setImageFile(null);
         setShowCreateVersionModal(true);
@@ -346,7 +370,7 @@ const Albums = () => {
                     onSubmit={handleCreateAlbum}
                     onClose={() => {
                         setShowCreateModal(false);
-                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null });
+                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased' });
                         setImageFile(null);
                     }}
                     isCreateVersion={false}
@@ -368,7 +392,7 @@ const Albums = () => {
                     onClose={() => {
                         setShowEditModal(false);
                         setSelectedAlbum(null);
-                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null });
+                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased' });
                         setImageFile(null);
                     }}
                     loading={loading}
@@ -391,7 +415,7 @@ const Albums = () => {
                     onClose={() => {
                         setShowCreateVersionModal(false);
                         setSelectedAlbum(null);
-                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null });
+                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased' });
                         setImageFile(null);
                     }}
                     loading={loading}
@@ -514,16 +538,30 @@ const AlbumModal = ({ title, formData, setFormData, imageFile, setImageFile, onS
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Release Date</label>
-                        <input
-                            type="date"
-                            name="release_date"
-                            required
-                            value={formData.release_date}
-                            onChange={handleChange}
-                            className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-github-text-secondary mb-1">Release Date</label>
+                            <input
+                                type="date"
+                                name="release_date"
+                                required
+                                value={formData.release_date}
+                                onChange={handleChange}
+                                className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-github-text-secondary mb-1">Status</label>
+                            <select
+                                name="status"
+                                value={formData.status || 'Unreleased'}
+                                onChange={handleChange}
+                                className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
+                            >
+                                <option value="Unreleased">Unreleased</option>
+                                <option value="Released">Released</option>
+                            </select>
+                        </div>
                     </div>
 
                     {!isCreateVersion && (

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS albums (
 -- 3. If albums table already exists, add the new columns (do this before creating indexes)
 ALTER TABLE albums ADD COLUMN IF NOT EXISTS album_type TEXT DEFAULT 'standard';
 ALTER TABLE albums ADD COLUMN IF NOT EXISTS parent_album_id UUID REFERENCES albums(id) ON DELETE SET NULL;
+ALTER TABLE albums ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Unreleased'; -- 'Released' or 'Unreleased'
 
 -- 4. Create album_tracks junction table (many-to-many relationship)
 CREATE TABLE IF NOT EXISTS album_tracks (
