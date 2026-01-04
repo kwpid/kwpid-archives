@@ -23,6 +23,7 @@ const Archive = () => {
     // Filters & Search
     const [filter, setFilter] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
+    const [eraFilter, setEraFilter] = useState('All');
 
     // Sorting state
     const [sortField, setSortField] = useState('date_written');
@@ -72,6 +73,7 @@ const Archive = () => {
         fetchData();
         setFilter('All');
         setSearchQuery('');
+        setEraFilter('All');
         setSortField('date_written');
         setSortOrder('desc');
     }, [category, dbCategory, isFull]);
@@ -90,17 +92,24 @@ const Archive = () => {
         return sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-github-accent" /> : <ArrowDown className="w-3 h-3 text-github-accent" />;
     };
 
+    // Get all unique eras for the dropdown (Full songs only)
+    const availableEras = isFull ? [...new Set(songs.map(song => {
+        const era = getSongEra(song, albums);
+        return era;
+    }).filter(Boolean))].sort() : [];
+
     // Filter & Sort Logic
     const filteredAndSortedSongs = songs
-        .filter(song => {
-            const matchesCategory = filter === 'All' || song.sub_category === filter;
-            const matchesSearch = song.title.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesCategory && matchesSearch;
-        })
         .map(song => ({
             ...song,
             era: isFull ? getSongEra(song, albums) : null
         }))
+        .filter(song => {
+            const matchesCategory = filter === 'All' || song.sub_category === filter;
+            const matchesSearch = song.title.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesEra = !isFull || eraFilter === 'All' || song.era === eraFilter;
+            return matchesCategory && matchesSearch && matchesEra;
+        })
         .sort((a, b) => {
             if (sortField === 'era' && isFull) {
                 const eraA = a.era || 'ZZZ';
@@ -145,16 +154,32 @@ const Archive = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                    {/* Search Bar */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-github-text-secondary" />
-                        <input
-                            type="text"
-                            placeholder="Search songs..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 pr-4 py-1.5 bg-github-bg-secondary border border-github-border rounded-full text-sm text-github-text focus:outline-none focus:border-github-accent w-full sm:w-64"
-                        />
+                    {/* Search Bar and Era Filter */}
+                    <div className="flex gap-2 flex-1 sm:flex-initial">
+                        <div className="relative flex-1 sm:flex-initial">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-github-text-secondary" />
+                            <input
+                                type="text"
+                                placeholder="Search songs..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 pr-4 py-1.5 bg-github-bg-secondary border border-github-border rounded-full text-sm text-github-text focus:outline-none focus:border-github-accent w-full sm:w-64"
+                            />
+                        </div>
+
+                        {/* Era Filter Dropdown (Full songs only) */}
+                        {isFull && availableEras.length > 0 && (
+                            <select
+                                value={eraFilter}
+                                onChange={(e) => setEraFilter(e.target.value)}
+                                className="px-4 py-1.5 bg-github-bg-secondary border border-github-border rounded-full text-sm text-github-text focus:outline-none focus:border-github-accent"
+                            >
+                                <option value="All">All Eras</option>
+                                {availableEras.map(era => (
+                                    <option key={era} value={era}>{era}</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
                     {/* Subcategory Filter */}
