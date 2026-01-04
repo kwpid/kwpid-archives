@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthProvider';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Plus, Edit, Trash2, Music, X, Check, Disc, Sparkles, Gift } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Albums = () => {
     const { isAdmin } = useAuth();
@@ -327,9 +328,6 @@ const Albums = () => {
                         <AlbumCard
                             key={album.id}
                             album={album}
-                            onEdit={() => openEditModal(album)}
-                            onDelete={() => handleDeleteAlbum(album.id)}
-                            onAssign={() => openAssignModal(album)}
                             onCreateDeluxe={() => openCreateVersionModal(album, 'deluxe')}
                             onCreateAnniversary={() => openCreateVersionModal(album, 'anniversary')}
                         />
@@ -421,62 +419,23 @@ const Albums = () => {
     );
 };
 
-const AlbumCard = ({ album, onEdit, onDelete, onAssign, onCreateDeluxe, onCreateAnniversary }) => {
-    const [albumTracks, setAlbumTracks] = useState([]);
-    const [parentAlbum, setParentAlbum] = useState(null);
-
-    useEffect(() => {
-        const fetchTracks = async () => {
-            const { data } = await supabase
-                .from('album_tracks')
-                .select('song_id, track_number')
-                .eq('album_id', album.id)
-                .order('track_number', { ascending: true });
-
-            if (data) {
-                setAlbumTracks(data);
-            }
-        };
-        fetchTracks();
-
-        // Fetch parent album if this is a deluxe/anniversary version
-        const fetchParentAlbum = async () => {
-            if (album.parent_album_id) {
-                const { data: parent } = await supabase
-                    .from('albums')
-                    .select('name')
-                    .eq('id', album.parent_album_id)
-                    .single();
-                
-                if (parent) {
-                    setParentAlbum(parent);
-                }
-            }
-        };
-        fetchParentAlbum();
-    }, [album.id, album.parent_album_id]);
-
-    const formatDate = (dateString) => {
-        if (!dateString) return 'Unknown Date';
-        const date = new Date(`${dateString}T12:00:00`);
-        return date.toLocaleDateString('en-US', {
-            month: '2-digit',
-            day: '2-digit',
-            year: 'numeric'
-        });
-    };
-
+const AlbumCard = ({ album, onCreateDeluxe, onCreateAnniversary }) => {
     const isStandard = album.album_type === 'standard' || !album.album_type;
     const isDeluxe = album.album_type === 'deluxe';
     const isAnniversary = album.album_type === 'anniversary';
 
     return (
-        <div className="bg-github-bg-secondary border border-github-border rounded-lg overflow-hidden hover:border-github-accent transition-colors">
-            <div className="aspect-square bg-github-bg flex items-center justify-center overflow-hidden relative">
+        <div className="group relative">
+            <Link
+                to={`/album/${album.id}`}
+                className="block aspect-square bg-github-bg-secondary border border-github-border rounded-lg overflow-hidden hover:border-github-accent transition-colors relative"
+            >
                 {album.cover_image_url ? (
                     <img src={album.cover_image_url} alt={album.name} className="w-full h-full object-cover" />
                 ) : (
-                    <Disc className="w-16 h-16 text-github-text-secondary opacity-50" />
+                    <div className="w-full h-full flex items-center justify-center">
+                        <Disc className="w-16 h-16 text-github-text-secondary opacity-50" />
+                    </div>
                 )}
                 {(isDeluxe || isAnniversary) && (
                     <div className="absolute top-2 right-2">
@@ -487,63 +446,36 @@ const AlbumCard = ({ album, onEdit, onDelete, onAssign, onCreateDeluxe, onCreate
                         </span>
                     </div>
                 )}
-            </div>
-            <div className="p-4">
-                <div className="flex items-start justify-between mb-1">
-                    <h3 className="font-bold text-github-text">{album.name}</h3>
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                    <h3 className="text-white font-bold text-lg opacity-0 group-hover:opacity-100 transition-opacity text-center px-4">
+                        {album.name}
+                    </h3>
                 </div>
-                {parentAlbum && (
-                    <p className="text-xs text-github-text-secondary mb-1">
-                        Based on: {parentAlbum.name}
-                    </p>
-                )}
-                <p className="text-xs text-github-text-secondary mb-3">
-                    Released: {formatDate(album.release_date)}
-                </p>
-                <p className="text-xs text-github-text-secondary mb-4">
-                    {albumTracks.length} track{albumTracks.length !== 1 ? 's' : ''}
-                </p>
-                <div className="space-y-2">
-                    <div className="flex gap-2">
-                        <button
-                            onClick={onAssign}
-                            className="flex-1 px-3 py-1.5 text-xs bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors"
-                        >
-                            Assign Tracks
-                        </button>
-                        <button
-                            onClick={onEdit}
-                            className="px-3 py-1.5 text-xs bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors"
-                        >
-                            <Edit className="w-3 h-3" />
-                        </button>
-                        <button
-                            onClick={onDelete}
-                            className="px-3 py-1.5 text-xs bg-red-900/30 border border-red-900/50 text-red-500 rounded hover:bg-red-900/50 transition-colors"
-                        >
-                            <Trash2 className="w-3 h-3" />
-                        </button>
-                    </div>
-                    {isStandard && (
-                        <div className="flex gap-2">
-                            <button
-                                onClick={onCreateDeluxe}
-                                className="flex-1 px-3 py-1.5 text-xs bg-purple-600/20 border border-purple-600/50 text-purple-400 rounded hover:bg-purple-600/30 transition-colors flex items-center justify-center gap-1"
-                            >
-                                <Sparkles className="w-3 h-3" />
-                                Deluxe
-                            </button>
-                            <button
-                                onClick={onCreateAnniversary}
-                                className="flex-1 px-3 py-1.5 text-xs bg-yellow-600/20 border border-yellow-600/50 text-yellow-400 rounded hover:bg-yellow-600/30 transition-colors flex items-center justify-center gap-1"
-                            >
-                                <Gift className="w-3 h-3" />
-                                Anniversary
-                            </button>
-                        </div>
-                    )}
+            </Link>
+            {isStandard && (
+                <div className="mt-2 flex gap-2">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onCreateDeluxe();
+                        }}
+                        className="flex-1 px-2 py-1 text-xs bg-purple-600/20 border border-purple-600/50 text-purple-400 rounded hover:bg-purple-600/30 transition-colors flex items-center justify-center gap-1"
+                    >
+                        <Sparkles className="w-3 h-3" />
+                        Deluxe
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onCreateAnniversary();
+                        }}
+                        className="flex-1 px-2 py-1 text-xs bg-yellow-600/20 border border-yellow-600/50 text-yellow-400 rounded hover:bg-yellow-600/30 transition-colors flex items-center justify-center gap-1"
+                    >
+                        <Gift className="w-3 h-3" />
+                        Anniversary
+                    </button>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

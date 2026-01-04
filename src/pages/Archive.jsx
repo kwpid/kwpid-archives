@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { getSongEra } from '../lib/eraUtils';
 import { Music, Calendar, Clock, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
 
 const formatDate = (dateString) => {
@@ -16,6 +17,7 @@ const formatDate = (dateString) => {
 const Archive = () => {
     const { category } = useParams(); // 'full' or 'written'
     const [songs, setSongs] = useState([]);
+    const [albums, setAlbums] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Filters & Search
@@ -33,30 +35,46 @@ const Archive = () => {
     const subCategories = isFull ? ['Released', 'Unreleased', 'Demos'] : []; // Removed Sessions from filter bar
 
     useEffect(() => {
-        const fetchSongs = async () => {
+        const fetchData = async () => {
             setLoading(true);
+            
+            // Fetch songs
             let query = supabase
                 .from('songs')
                 .select('*')
                 .eq('category', dbCategory)
                 .neq('sub_category', 'Sessions'); // Exclude sessions from archive
 
-            const { data, error } = await query;
+            const { data: songsData, error: songsError } = await query;
 
-            if (error) {
-                console.error('Error fetching songs:', error);
+            if (songsError) {
+                console.error('Error fetching songs:', songsError);
             } else {
-                setSongs(data || []);
+                setSongs(songsData || []);
             }
+
+            // Fetch albums (for era calculation)
+            if (isFull) {
+                const { data: albumsData, error: albumsError } = await supabase
+                    .from('albums')
+                    .select('*');
+
+                if (albumsError) {
+                    console.error('Error fetching albums:', albumsError);
+                } else {
+                    setAlbums(albumsData || []);
+                }
+            }
+
             setLoading(false);
         };
 
-        fetchSongs();
+        fetchData();
         setFilter('All');
         setSearchQuery('');
         setSortField('date_written');
         setSortOrder('desc');
-    }, [category, dbCategory]);
+    }, [category, dbCategory, isFull]);
 
     const handleSort = (field) => {
         if (sortField === field) {
@@ -79,7 +97,22 @@ const Archive = () => {
             const matchesSearch = song.title.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesCategory && matchesSearch;
         })
+        .map(song => ({
+            ...song,
+            era: isFull ? getSongEra(song, albums) : null
+        }))
         .sort((a, b) => {
+            if (sortField === 'era' && isFull) {
+                const eraA = a.era || 'ZZZ';
+                const eraB = b.era || 'ZZZ';
+                if (eraA < eraB) return sortOrder === 'asc' ? -1 : 1;
+                if (eraA > eraB) return sortOrder === 'asc' ? 1 : -1;
+                // If eras are the same, sort by date
+                const dateA = new Date(a.date_written || a.created_at);
+                const dateB = new Date(b.date_written || b.created_at);
+                return dateA - dateB;
+            }
+
             let valA = a[sortField];
             let valB = b[sortField];
 
@@ -157,7 +190,12 @@ const Archive = () => {
                     <div className="col-span-3 md:col-span-2 cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('date_written')}>
                         Date {getSortIcon('date_written')}
                     </div>
-                    <div className="col-span-2 hidden md:block">Description</div>
+                    {isFull && (
+                        <div className="col-span-2 hidden md:block cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('era')}>
+                            Era {getSortIcon('era')}
+                        </div>
+                    )}
+                    <div className={`col-span-2 ${isFull ? 'hidden' : ''} md:block`}>Description</div>
                     <div className="col-span-2 hidden md:block">Status</div>
                     <div className="col-span-2 md:col-span-2 text-right">Details</div>
                 </div>
@@ -196,10 +234,19 @@ const Archive = () => {
                                     {formatDate(song.date_written || song.created_at)}
                                 </div>
 
-                                {/* Description (Hidden on mobile) */}
-                                <div className="col-span-2 hidden md:block text-github-text-secondary truncate text-xs">
-                                    {song.description || '-'}
-                                </div>
+                                {/* Era (Full songs only, hidden on mobile) */}
+                                {isFull && (
+                                    <div className="col-span-2 hidden md:block text-github-text-secondary text-xs">
+                                        {song.era || '-'}
+                                    </div>
+                                )}
+
+                                {/* Description (Hidden on mobile, only for written) */}
+                                {!isFull && (
+                                    <div className="col-span-2 hidden md:block text-github-text-secondary truncate text-xs">
+                                        {song.description || '-'}
+                                    </div>
+                                )}
 
                                 {/* Status/Category (Hidden on mobile) */}
                                 <div className="col-span-2 hidden md:block">

@@ -168,23 +168,7 @@ const Settings = () => {
 
         // Album-based eras
         if (sortedAlbums.length > 0 && postEarlySongs.length > 0) {
-            // First album era: from 11/21/2025 to first album release
-            const firstAlbumDate = new Date(sortedAlbums[0].release_date);
-            const firstAlbumEraSongs = postEarlySongs.filter(song => {
-                const songDate = new Date(song.date_written || song.created_at);
-                return songDate < firstAlbumDate;
-            });
-
-            if (firstAlbumEraSongs.length > 0) {
-                eras.push({
-                    name: `${sortedAlbums[0].name} Era`,
-                    songs: firstAlbumEraSongs,
-                    startDate: new Date('2025-11-21'),
-                    endDate: firstAlbumDate
-                });
-            }
-
-            // Subsequent album eras (from album release to next album release)
+            // Process each album era
             for (let i = 0; i < sortedAlbums.length; i++) {
                 const album = sortedAlbums[i];
                 const albumDate = new Date(album.release_date);
@@ -192,16 +176,33 @@ const Settings = () => {
                     ? new Date(sortedAlbums[i + 1].release_date)
                     : null;
 
+                // For the first album: include songs from 11/21/2025 to next album (or end)
+                // For subsequent albums: include songs from this album release to next album (or end)
                 const eraSongs = postEarlySongs.filter(song => {
                     const songDate = new Date(song.date_written || song.created_at);
-                    return songDate >= albumDate && (nextAlbumDate === null || songDate < nextAlbumDate);
+                    if (i === 0) {
+                        // First album era: from 11/21/2025 to next album release (or end)
+                        const startDate = new Date('2025-11-21');
+                        if (nextAlbumDate === null) {
+                            return songDate >= startDate;
+                        } else {
+                            return songDate >= startDate && songDate < nextAlbumDate;
+                        }
+                    } else {
+                        // Subsequent albums: from this album release to next album release (or end)
+                        if (nextAlbumDate === null) {
+                            return songDate >= albumDate;
+                        } else {
+                            return songDate >= albumDate && songDate < nextAlbumDate;
+                        }
+                    }
                 });
 
                 if (eraSongs.length > 0) {
                     eras.push({
                         name: `${album.name} Era`,
                         songs: eraSongs,
-                        startDate: albumDate,
+                        startDate: i === 0 ? new Date('2025-11-21') : albumDate,
                         endDate: nextAlbumDate
                     });
                 }

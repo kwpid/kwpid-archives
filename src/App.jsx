@@ -10,6 +10,7 @@ import AdminUpload from './pages/AdminUpload';
 import AdminEdit from './pages/AdminEdit';
 import Settings from './pages/Settings';
 import Albums from './pages/Albums';
+import AlbumDetail from './pages/AlbumDetail';
 import { AuthProvider } from './contexts/AuthProvider';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
             <Route path="edit/:id" element={<AdminEdit />} />
             <Route path="settings" element={<Settings />} />
             <Route path="albums" element={<Albums />} />
+            <Route path="album/:id" element={<AlbumDetail />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

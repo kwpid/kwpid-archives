@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Disc, FileText, Music, Play, ExternalLink, Edit, Trash2, GitBranch, ArrowLeft, HelpCircle } from 'lucide-react';
+import { Calendar, Clock, Disc, FileText, Music, Play, ExternalLink, Edit, Trash2, GitBranch, ArrowLeft, HelpCircle, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthProvider';
+import { getSongEra } from '../lib/eraUtils';
 
 const formatDate = (dateString) => {
     if (!dateString) return 'Unknown Date';
@@ -24,6 +25,8 @@ const SongDetail = () => {
     const [sessionFile, setSessionFile] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [album, setAlbum] = useState(null);
+    const [albums, setAlbums] = useState([]);
+    const [era, setEra] = useState(null);
 
     useEffect(() => {
         const fetchSong = async () => {
@@ -57,6 +60,19 @@ const SongDetail = () => {
 
                 if (childSession) {
                     setSessionFile(childSession);
+                }
+
+                // Fetch albums for era calculation
+                const { data: albumsData } = await supabase
+                    .from('albums')
+                    .select('*');
+
+                if (albumsData) {
+                    setAlbums(albumsData || []);
+                    // Calculate era
+                    if (currentSong.category === 'Full') {
+                        setEra(getSongEra(currentSong, albumsData));
+                    }
                 }
 
                 // Fetch album information if this song is on an album
@@ -235,6 +251,15 @@ const SongDetail = () => {
                                     <div>
                                         <p className="text-xs text-github-text-secondary">Producer</p>
                                         <p className="text-sm font-medium">prod. {song.producer}</p>
+                                    </div>
+                                </li>
+                            )}
+                            {song.category === 'Full' && era && (
+                                <li className="flex items-center gap-3 text-github-text">
+                                    <Sparkles className="w-4 h-4 text-github-accent-text" />
+                                    <div>
+                                        <p className="text-xs text-github-text-secondary">Era</p>
+                                        <p className="text-sm font-medium">{era}</p>
                                     </div>
                                 </li>
                             )}
