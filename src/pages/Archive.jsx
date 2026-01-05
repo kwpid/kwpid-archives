@@ -223,27 +223,6 @@ const Archive = () => {
                             Unreleased
                         </button>
                     </div>
-
-                    {/* Subcategory Filter */}
-                    {isFull && (
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={() => setFilter('All')}
-                                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${filter === 'All' ? 'bg-github-accent text-white' : 'bg-github-border text-github-text-secondary hover:text-github-text'}`}
-                            >
-                                All Categories
-                            </button>
-                            {subCategories.map(sub => (
-                                <button
-                                    key={sub}
-                                    onClick={() => setFilter(sub)}
-                                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${filter === sub ? 'bg-github-accent text-white' : 'bg-github-border text-github-text-secondary hover:text-github-text'}`}
-                                >
-                                    {sub}
-                                </button>
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
 
