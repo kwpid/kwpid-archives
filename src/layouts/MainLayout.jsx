@@ -33,29 +33,21 @@ const MainLayout = () => {
                         <div className="hidden md:flex items-center space-x-4">
                             <NavLink to="/" active={isActive('/')}>Dashboard</NavLink>
                             <NavLink to="/archive/full" active={isActive('/archive/full')}>Full Songs</NavLink>
+                            <NavLink to="/albums" active={isActive('/albums')}>
+                                <Disc className="w-4 h-4 inline-block mr-1" /> Albums
+                            </NavLink>
                             <NavLink to="/settings" active={isActive('/settings')}>Settings</NavLink>
 
                             {isAdmin && (
-                                <>
-                                    <Link
-                                        to="/albums"
-                                        className={clsx(
-                                            "flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                                            isActive('/albums') ? "bg-github-accent text-white" : "text-github-accent-text hover:bg-github-border"
-                                        )}
-                                    >
-                                        <Disc className="w-4 h-4" /> Albums
-                                    </Link>
-                                    <Link
-                                        to="/upload"
-                                        className={clsx(
-                                            "flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                                            isActive('/upload') ? "bg-github-accent text-white" : "text-github-accent-text hover:bg-github-border"
-                                        )}
-                                    >
-                                        <Upload className="w-4 h-4" /> Upload
-                                    </Link>
-                                </>
+                                <Link
+                                    to="/upload"
+                                    className={clsx(
+                                        "flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                                        isActive('/upload') ? "bg-github-accent text-white" : "text-github-accent-text hover:bg-github-border"
+                                    )}
+                                >
+                                    <Upload className="w-4 h-4" /> Upload
+                                </Link>
                             )}
 
                             {user ? (
@@ -89,17 +81,13 @@ const MainLayout = () => {
                         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                             <MobileNavLink to="/" onClick={toggleMenu}>Dashboard</MobileNavLink>
                             <MobileNavLink to="/archive/full" onClick={toggleMenu}>Full Songs</MobileNavLink>
+                            <MobileNavLink to="/albums" onClick={toggleMenu}>Albums</MobileNavLink>
                             <MobileNavLink to="/settings" onClick={toggleMenu}>Settings</MobileNavLink>
 
                             {isAdmin && (
-                                <>
-                                    <MobileNavLink to="/albums" onClick={toggleMenu} className="text-github-accent-text">
-                                        Albums
-                                    </MobileNavLink>
-                                    <MobileNavLink to="/upload" onClick={toggleMenu} className="text-github-accent-text">
-                                        + Upload Song
-                                    </MobileNavLink>
-                                </>
+                                <MobileNavLink to="/upload" onClick={toggleMenu} className="text-github-accent-text">
+                                    + Upload Song
+                                </MobileNavLink>
                             )}
 
                             {user ? (
