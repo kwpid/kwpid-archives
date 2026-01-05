@@ -90,7 +90,14 @@ const Archive = () => {
         setSortOrder('desc');
     }, []);
 
-    // ... (keep sort logic same)
+    // Create song to album map for cover art
+    const songToAlbumMap = isFull ? createSongToAlbumMap(albumTracks) : {};
+
+    // Get all unique eras for the dropdown (Full songs only)
+    const availableEras = isFull ? [...new Set(songs.map(song => {
+        const era = getSongEra(song, albums);
+        return era;
+    }).filter(Boolean))].sort() : [];
 
     // Filter & Sort Logic
     const filteredAndSortedSongs = songs
