@@ -176,6 +176,11 @@ const SongDetail = () => {
                         </div>
 
                         <h1 className="text-4xl md:text-5xl font-extrabold text-github-text tracking-tight mb-2">{song.title}</h1>
+                        {song.alt_names && song.alt_names.length > 0 && (
+                            <p className="text-github-text-secondary text-sm mb-2 italic">
+                                Also known as: {song.alt_names.join(', ')}
+                            </p>
+                        )}
                         <p className="text-github-text-secondary text-lg">{song.description}</p>
                     </div>
                 </div>

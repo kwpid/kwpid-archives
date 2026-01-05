@@ -23,6 +23,7 @@ const AdminUpload = () => {
         version_number: '1.0',
         beat_link: '',
         description: '',
+        alt_names: '', // Comma-separated string for input
         time_taken: '',
         producer: '',
         parent_id: null,
@@ -47,6 +48,7 @@ const AdminUpload = () => {
                         beat_link: data.beat_link,
                         description: `Session file for ${data.title}`,
                         time_taken: data.time_taken,
+                        alt_names: (data.alt_names || []).join(', '),
                         parent_id: data.id,
                         image_url: data.image_url
                     }));
@@ -57,12 +59,7 @@ const AdminUpload = () => {
         fetchParent();
     }, [mode, sourceId]);
 
-    // Enforce Written -> Demo logic
-    useEffect(() => {
-        if (formData.category === 'Written') {
-            setFormData(prev => ({ ...prev, sub_category: 'Demos' }));
-        }
-    }, [formData.category]);
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -110,7 +107,9 @@ const AdminUpload = () => {
             const songData = {
                 ...formData,
                 date_written: formData.date_written || null,
-                image_url: imageUrl || null
+                date_written: formData.date_written || null,
+                image_url: imageUrl || null,
+                alt_names: formData.alt_names ? formData.alt_names.split(',').map(s => s.trim()).filter(Boolean) : null
             };
 
             const { error } = await supabase
@@ -142,7 +141,6 @@ const AdminUpload = () => {
         );
     }
 
-    const isWritten = formData.category === 'Written';
     const isSessionMode = mode === 'session';
 
     return (
@@ -168,18 +166,11 @@ const AdminUpload = () => {
                         <label className="block text-sm font-medium text-github-text-secondary mb-1">Category</label>
                         <select name="category" value={formData.category} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text">
                             <option value="Full">Full Song</option>
-                            <option value="Written">Written</option>
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-github-text-secondary mb-1">Sub Category</label>
-                        {isWritten ? (
-                            <input
-                                value="Demos (Auto)"
-                                disabled
-                                className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text-secondary opacity-70 cursor-not-allowed"
-                            />
-                        ) : isSessionMode ? (
+                        {isSessionMode ? (
                             <input
                                 value="Sessions (Locked)"
                                 disabled
@@ -190,10 +181,11 @@ const AdminUpload = () => {
                                 <option value="Released">Released</option>
                                 <option value="Unreleased">Unreleased</option>
                                 <option value="Demos">Demos</option>
+                                <option value="Throwaway (Completed)">Throwaway (Completed)</option>
+                                <option value="Throwaway (Demo)">Throwaway (Demo)</option>
                                 {/* Removed 'Sessions' from manual selection to enforce workflow */}
                             </select>
                         )}
-                        {isWritten && <p className="text-xs text-github-text-secondary mt-1">Written songs are automatically categorized as Demos.</p>}
                     </div>
                 </div>
 
@@ -209,7 +201,7 @@ const AdminUpload = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Date Written {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Date Written</label>
                         <input type="date" name="date_written" value={formData.date_written} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
                     </div>
                     <div>
@@ -219,18 +211,24 @@ const AdminUpload = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Beat Link (URL) {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Beat Link (URL)</label>
                     <input name="beat_link" value={formData.beat_link} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Producer {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Producer</label>
                     <input name="producer" value={formData.producer} onChange={handleChange} placeholder="e.g. aura" className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
                     <p className="mt-1 text-xs text-github-text-secondary">Will be formatted as "prod. [name]" in displays</p>
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Cover Image {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Alternate Names</label>
+                    <input name="alt_names" value={formData.alt_names} onChange={handleChange} placeholder="e.g. Project X, The Lost Song" className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
+                    <p className="mt-1 text-xs text-github-text-secondary">Comma-separated list of other names this song is known by.</p>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Cover Image</label>
                     {isSessionMode && formData.image_url && (
                         <div className="mb-2">
                             <span className="text-xs text-github-text-secondary">Inherited from parent (optional to change)</span>

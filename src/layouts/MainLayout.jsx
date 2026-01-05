@@ -33,7 +33,6 @@ const MainLayout = () => {
                         <div className="hidden md:flex items-center space-x-4">
                             <NavLink to="/" active={isActive('/')}>Dashboard</NavLink>
                             <NavLink to="/archive/full" active={isActive('/archive/full')}>Full Songs</NavLink>
-                            <NavLink to="/archive/written" active={isActive('/archive/written')}>Written</NavLink>
                             <NavLink to="/settings" active={isActive('/settings')}>Settings</NavLink>
 
                             {isAdmin && (
@@ -90,7 +89,6 @@ const MainLayout = () => {
                         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                             <MobileNavLink to="/" onClick={toggleMenu}>Dashboard</MobileNavLink>
                             <MobileNavLink to="/archive/full" onClick={toggleMenu}>Full Songs</MobileNavLink>
-                            <MobileNavLink to="/archive/written" onClick={toggleMenu}>Written</MobileNavLink>
                             <MobileNavLink to="/settings" onClick={toggleMenu}>Settings</MobileNavLink>
 
                             {isAdmin && (

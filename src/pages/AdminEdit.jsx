@@ -21,7 +21,9 @@ const AdminEdit = () => {
         beat_link: '',
         description: '',
         time_taken: '',
+        time_taken: '',
         producer: '',
+        alt_names: '',
         image_url: ''
     });
 
@@ -50,6 +52,7 @@ const AdminEdit = () => {
                     description: data.description || '',
                     time_taken: data.time_taken || '',
                     producer: data.producer || '',
+                    alt_names: (data.alt_names || []).join(', '),
                     image_url: data.image_url || ''
                 });
             }
@@ -59,15 +62,7 @@ const AdminEdit = () => {
         fetchSong();
     }, [id, navigate]);
 
-    // Enforce Written -> Demo logic
-    useEffect(() => {
-        if (formData.category === 'Written') {
-            const currentSub = formData.sub_category;
-            if (currentSub !== 'Demos') {
-                setFormData(prev => ({ ...prev, sub_category: 'Demos' }));
-            }
-        }
-    }, [formData.category, formData.sub_category]);
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -115,7 +110,8 @@ const AdminEdit = () => {
             const songData = {
                 ...formData,
                 date_written: formData.date_written || null,
-                image_url: imageUrl || null
+                image_url: imageUrl || null,
+                alt_names: formData.alt_names ? formData.alt_names.split(',').map(s => s.trim()).filter(Boolean) : null
             };
 
             const { error } = await supabase
@@ -146,7 +142,7 @@ const AdminEdit = () => {
 
     if (loading) return <div className="text-center py-10">Loading song data...</div>;
 
-    const isWritten = formData.category === 'Written';
+
 
     return (
         <div className="max-w-2xl mx-auto">
@@ -169,26 +165,18 @@ const AdminEdit = () => {
                         <label className="block text-sm font-medium text-github-text-secondary mb-1">Category</label>
                         <select name="category" value={formData.category} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text">
                             <option value="Full">Full Song</option>
-                            <option value="Written">Written</option>
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-github-text-secondary mb-1">Sub Category</label>
-                        {isWritten ? (
-                            <input
-                                value="Demos (Auto)"
-                                disabled
-                                className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text-secondary opacity-70 cursor-not-allowed"
-                            />
-                        ) : (
-                            <select name="sub_category" value={formData.sub_category} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text">
-                                <option value="Released">Released</option>
-                                <option value="Unreleased">Unreleased</option>
-                                <option value="Demos">Demos</option>
-                                <option value="Sessions">Sessions</option>
-                            </select>
-                        )}
-                        {isWritten && <p className="text-xs text-github-text-secondary mt-1">Written songs are automatically categorized as Demos.</p>}
+                        <select name="sub_category" value={formData.sub_category} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text">
+                            <option value="Released">Released</option>
+                            <option value="Unreleased">Unreleased</option>
+                            <option value="Demos">Demos</option>
+                            <option value="Sessions">Sessions</option>
+                            <option value="Throwaway (Completed)">Throwaway (Completed)</option>
+                            <option value="Throwaway (Demo)">Throwaway (Demo)</option>
+                        </select>
                     </div>
                 </div>
 
@@ -204,7 +192,7 @@ const AdminEdit = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Date Written {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Date Written</label>
                         <input type="date" name="date_written" value={formData.date_written} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
                     </div>
                     <div>
@@ -214,18 +202,24 @@ const AdminEdit = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Beat Link (URL) {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Beat Link (URL)</label>
                     <input name="beat_link" value={formData.beat_link} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Producer {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Producer</label>
                     <input name="producer" value={formData.producer} onChange={handleChange} placeholder="e.g. aura" className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
                     <p className="mt-1 text-xs text-github-text-secondary">Will be formatted as "prod. [name]" in displays</p>
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Cover Image {isWritten && <span className="text-xs">(Optional)</span>}</label>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Alternate Names</label>
+                    <input name="alt_names" value={formData.alt_names} onChange={handleChange} placeholder="e.g. Project X, The Lost Song" className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text" />
+                    <p className="mt-1 text-xs text-github-text-secondary">Comma-separated list of other names this song is known by.</p>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Cover Image</label>
                     {formData.image_url && !imageFile && (
                         <div className="mb-2">
                             <img src={formData.image_url} alt="Current" className="h-20 w-20 object-cover rounded border border-github-border" />

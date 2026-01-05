@@ -21,7 +21,6 @@ const Settings = () => {
 
     // States for feedback
     const [copiedFull, setCopiedFull] = useState(false);
-    const [copiedWritten, setCopiedWritten] = useState(false);
     const [copiedLyrics, setCopiedLyrics] = useState(false);
 
     useEffect(() => {
@@ -74,32 +73,7 @@ const Settings = () => {
         if (filterCategory === 'Full') {
             return generateEraBasedList();
         }
-
-        // For Written songs, use the old format
-        const mainSongs = songs.filter(s =>
-            s.sub_category !== 'Sessions' &&
-            s.category === filterCategory
-        );
-
-        const sessions = songs.filter(s => s.sub_category === 'Sessions');
-        const sessionCounts = {};
-        sessions.forEach(session => {
-            if (session.parent_id) {
-                sessionCounts[session.parent_id] = (sessionCounts[session.parent_id] || 0) + 1;
-            }
-        });
-
-        let result = '';
-        mainSongs.forEach((song, index) => {
-            const date = formatDate(song.date_written || song.created_at);
-            const sessionCount = sessionCounts[song.id] || 0;
-            const category = song.sub_category || 'Unknown';
-            const sessionText = sessionCount > 0 ? ` (+${sessionCount} Session${sessionCount > 1 ? 's' : ''})` : '';
-
-            result += `${index + 1}. ${song.title} (${date}) - ${category}${sessionText}\n`;
-        });
-
-        return result.trim();
+        return '';
     };
 
     const generateEraBasedList = () => {
@@ -256,13 +230,7 @@ const Settings = () => {
         });
     };
 
-    const handleCopyWritten = () => {
-        const text = generateSimpleList('Written');
-        navigator.clipboard.writeText(text).then(() => {
-            setCopiedWritten(true);
-            setTimeout(() => setCopiedWritten(false), 2000);
-        });
-    };
+
 
     const handleCopyLyrics = () => {
         const text = generateLyricsList();
@@ -305,43 +273,33 @@ const Settings = () => {
                             {copiedFull ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                             {copiedFull ? 'Copied Full Songs!' : 'Copy Full Songs'}
                         </button>
+                    </div>
+                </div>
+            </div>
 
-                        <button
-                            onClick={handleCopyWritten}
-                            disabled={loading}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-github-bg border border-github-border text-github-text rounded-md hover:bg-github-border transition-colors disabled:opacity-50"
-                        >
-                            {copiedWritten ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                            {copiedWritten ? 'Copied Written Songs!' : 'Copy Written Songs'}
-                        </button>
+            {/* Card 2: Full Backup */}
+            <div className="bg-github-bg-secondary border border-github-border rounded-lg p-6">
+                <div className="flex items-start justify-between mb-4">
+                    <div>
+                        <h2 className="text-lg font-bold text-github-text flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-github-accent" />
+                            Full Backup (With Lyrics)
+                        </h2>
+                        <p className="text-github-text-secondary text-sm mt-1">
+                            Copies raw data for Full songs and Sessions (with lyrics).
+                            Excludes Written works.
+                        </p>
                     </div>
                 </div>
 
-                {/* Card 2: Full Backup */}
-                <div className="bg-github-bg-secondary border border-github-border rounded-lg p-6">
-                    <div className="flex items-start justify-between mb-4">
-                        <div>
-                            <h2 className="text-lg font-bold text-github-text flex items-center gap-2">
-                                <FileText className="w-5 h-5 text-github-accent" />
-                                Full Backup (With Lyrics)
-                            </h2>
-                            <p className="text-github-text-secondary text-sm mt-1">
-                                Copies raw data for Full songs and Sessions (with lyrics).
-                                Excludes Written works.
-                            </p>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={handleCopyLyrics}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-4 py-2 bg-github-bg border border-github-border text-github-text rounded-md hover:bg-github-border transition-colors disabled:opacity-50"
-                    >
-                        {copiedLyrics ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        {copiedLyrics ? 'Copied Raw Data!' : 'Copy Raw Data'}
-                    </button>
-                </div>
-
+                <button
+                    onClick={handleCopyLyrics}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-4 py-2 bg-github-bg border border-github-border text-github-text rounded-md hover:bg-github-border transition-colors disabled:opacity-50"
+                >
+                    {copiedLyrics ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copiedLyrics ? 'Copied Raw Data!' : 'Copy Raw Data'}
+                </button>
             </div>
         </div>
     );

@@ -16,7 +16,6 @@ const formatDate = (dateString) => {
 };
 
 const Archive = () => {
-    const { category } = useParams(); // 'full' or 'written'
     const [songs, setSongs] = useState([]);
     const [albums, setAlbums] = useState([]);
     const [albumTracks, setAlbumTracks] = useState([]);
@@ -30,12 +29,10 @@ const Archive = () => {
     // Sorting state
     const [sortField, setSortField] = useState('date_written');
     const [sortOrder, setSortOrder] = useState('desc');
-
-    const isFull = category === 'full';
-    const dbCategory = isFull ? 'Full' : 'Written';
-
-    const displayTitle = isFull ? 'Full Songs' : 'Written Works';
-    const subCategories = isFull ? ['Released', 'Unreleased', 'Demos'] : []; // Removed Sessions from filter bar
+    const isFull = true;
+    const dbCategory = 'Full';
+    const displayTitle = 'Full Songs';
+    const subCategories = ['Released', 'Unreleased', 'Demos'];
 
     useEffect(() => {
         const fetchData = async () => {
@@ -89,7 +86,7 @@ const Archive = () => {
         setEraFilter('All');
         setSortField('date_written');
         setSortOrder('desc');
-    }, [category, dbCategory, isFull]);
+    }, []);
 
     const handleSort = (field) => {
         if (sortField === field) {
