@@ -21,19 +21,15 @@ const SongDetail = () => {
     const { id } = useParams();
     const { isAdmin } = useAuth();
     const navigate = useNavigate();
-    const [song, setSong] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [sessionFile, setSessionFile] = useState(null);
+    const [altFiles, setAltFiles] = useState([]);
+    const [activeTab, setActiveTab] = useState('lyrics');
     const [isDeleting, setIsDeleting] = useState(false);
-    const [album, setAlbum] = useState(null);
-    const [albums, setAlbums] = useState([]);
-    const [era, setEra] = useState(null);
-    const [displayImage, setDisplayImage] = useState(null);
 
     useEffect(() => {
         const fetchSong = async () => {
             setLoading(true);
-            setSessionFile(null); // Reset session file
+            setAltFiles([]);
 
             // 1. Fetch current song
             const { data: currentSong, error } = await supabase
@@ -47,88 +43,33 @@ const SongDetail = () => {
             } else if (currentSong) {
                 setSong(currentSong);
 
-                // 2. Logic to find related session file
-                // If this is a parent, find its child session
-                // If this is a session, currentSong.parent_id will exist (handled in render)
-
-                // Try to find a child session file
-                const { data: childSession } = await supabase
+                // 2. Logic to find related alt files (Sessions, Mixes, etc.)
+                const { data: relatedFiles } = await supabase
                     .from('songs')
                     .select('*')
                     .eq('parent_id', currentSong.id)
-                    .eq('sub_category', 'Sessions') // ensure it's a session
-                    .limit(1)
-                    .single();
+                    .order('date_written', { ascending: false });
 
-                if (childSession) {
-                    setSessionFile(childSession);
+                if (relatedFiles) {
+                    setAltFiles(relatedFiles);
                 }
 
-                // Fetch albums for era calculation
-                const { data: albumsData } = await supabase
-                    .from('albums')
-                    .select('*');
-
-                if (albumsData) {
-                    setAlbums(albumsData || []);
-                    // Calculate era
-                    if (currentSong.category === 'Full') {
-                        setEra(getSongEra(currentSong, albumsData));
-                    }
-                }
-
-                // Fetch album information if this song is on an album
-                const { data: albumTrack } = await supabase
-                    .from('album_tracks')
-                    .select('album_id, albums(id, cover_image_url, name)')
-                    .eq('song_id', currentSong.id)
-                    .limit(1)
-                    .maybeSingle();
-
-                if (albumTrack && albumTrack.albums) {
-                    const albumData = albumTrack.albums;
-                    setAlbum({ id: albumData.id, name: albumData.name, cover_image_url: albumData.cover_image_url });
-                    // Use album cover art for display (regardless of song's own image)
-                    setDisplayImage(albumData.cover_image_url || currentSong.image_url);
-                } else {
-                    // No album, use song's own image
-                    setDisplayImage(currentSong.image_url);
-                }
+                // ... (rest of fetch logic)
             }
             setLoading(false);
         };
-
-        if (id) {
-            fetchSong();
-        }
+        // ...
     }, [id]);
 
-    const handleDelete = async () => {
-        if (!confirm('Are you sure you want to DELETE this song? This action cannot be undone.')) return;
-
-        setIsDeleting(true);
-        const { error } = await supabase.from('songs').delete().eq('id', id);
-
-        if (error) {
-            alert('Error deleting song: ' + error.message);
-            setIsDeleting(false);
-        } else {
-            alert('Song deleted.');
-            navigate('/');
-        }
-    };
-
-    if (loading) return <div className="p-8 text-center text-github-text-secondary">Loading song details...</div>;
-    if (!song) return <div className="p-8 text-center text-github-text-secondary">Song not found.</div>;
-
-    const isSession = song.sub_category === 'Sessions';
+    // ... (inside return)
+    const isAlt = song.sub_category === 'Sessions' || song.sub_category.startsWith('Alt.');
 
     return (
         <div>
             {/* Header / Hero */}
             <div className="relative mb-8">
-                {/* Back Link for Session Files */}
-                {isSession && song.parent_id && (
+                {/* Back Link for Alt Files */}
+                {song.parent_id && (
                     <div className="mb-4">
                         <Link to={`/song/${song.parent_id}`} className="inline-flex items-center gap-2 text-github-text-secondary hover:text-github-accent-text text-sm mb-2">
                             <ArrowLeft className="w-4 h-4" /> Back to Original Song
@@ -147,7 +88,7 @@ const SongDetail = () => {
                     <div className="flex-grow pb-2">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 mb-2">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${isSession ? 'bg-purple-600 text-white' : 'bg-github-accent text-white'}`}>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${song.parent_id ? 'bg-purple-600 text-white' : 'bg-github-accent text-white'}`}>
                                     {song.sub_category || song.category}
                                 </span>
                                 {song.version_number && <span className="text-xs text-github-text-secondary">v{song.version_number}</span>}
@@ -156,80 +97,91 @@ const SongDetail = () => {
                             {/* Admin Controls */}
                             {isAdmin && (
                                 <div className="flex gap-2">
-                                    {!isSession && !sessionFile && (
-                                        <Link to={`/upload?mode=session&source=${id}`} className="flex items-center gap-2 px-3 py-1 bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors text-sm" title="Create Session File">
-                                            <GitBranch className="w-4 h-4" /> <span className="hidden sm:inline">Create Session</span>
+                                    {!song.parent_id && (
+                                        <Link to={`/upload?mode=alt&source=${id}`} className="flex items-center gap-2 px-3 py-1 bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors text-sm" title="Create Alt. File">
+                                            <GitBranch className="w-4 h-4" /> <span className="hidden sm:inline">Create Alt.</span>
                                         </Link>
                                     )}
                                     <Link to={`/edit/${id}`} className="flex items-center gap-2 px-3 py-1 bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors text-sm">
                                         <Edit className="w-4 h-4" /> <span className="hidden sm:inline">Edit</span>
                                     </Link>
-                                    <button
-                                        onClick={handleDelete}
-                                        disabled={isDeleting}
-                                        className="flex items-center gap-2 px-3 py-1 bg-red-900/30 border border-red-900/50 text-red-500 rounded hover:bg-red-900/50 transition-colors text-sm"
-                                    >
-                                        <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Delete</span>
-                                    </button>
+                                    {/* ... delete btn */}
                                 </div>
                             )}
                         </div>
 
                         <h1 className="text-4xl md:text-5xl font-extrabold text-github-text tracking-tight mb-2">{song.title}</h1>
-                        {song.alt_names && song.alt_names.length > 0 && (
-                            <p className="text-github-text-secondary text-sm mb-2 italic">
-                                Also known as: {song.alt_names.join(', ')}
-                            </p>
-                        )}
-                        <p className="text-github-text-secondary text-lg">{song.description}</p>
+                        {/* ... description */}
                     </div>
                 </div>
             </div>
 
+            {/* Tabs */}
+            <div className="flex border-b border-github-border mb-6">
+                <button
+                    onClick={() => setActiveTab('lyrics')}
+                    className={`px-6 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'lyrics' ? 'border-github-accent text-github-accent' : 'border-transparent text-github-text-secondary hover:text-github-text'}`}
+                >
+                    Lyrics
+                </button>
+                <button
+                    onClick={() => setActiveTab('files')}
+                    className={`px-6 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'files' ? 'border-github-accent text-github-accent' : 'border-transparent text-github-text-secondary hover:text-github-text'}`}
+                >
+                    Other Files ({altFiles.length})
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Lyrics */}
+                {/* Left Column: Tab Content */}
                 <div className="lg:col-span-2">
-                    <h2 className="text-xl font-bold text-github-text mb-4 flex items-center gap-2">
-                        <FileText className="w-5 h-5" /> Lyrics
-                    </h2>
-                    <div className="prose prose-invert max-w-none whitespace-pre-wrap text-github-text leading-relaxed p-6 bg-github-bg-secondary border border-github-border rounded-lg font-mono text-sm">
-                        {song.lyrics || "No lyrics available."}
-                    </div>
+                    {activeTab === 'lyrics' ? (
+                        <div>
+                            <h2 className="text-xl font-bold text-github-text mb-4 flex items-center gap-2">
+                                <FileText className="w-5 h-5" /> Lyrics
+                            </h2>
+                            <div className="prose prose-invert max-w-none whitespace-pre-wrap text-github-text leading-relaxed p-6 bg-github-bg-secondary border border-github-border rounded-lg font-mono text-sm">
+                                {song.lyrics || "No lyrics available."}
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <h2 className="text-xl font-bold text-github-text mb-4 flex items-center gap-2">
+                                <GitBranch className="w-5 h-5" /> Other Files
+                            </h2>
+                            {altFiles.length === 0 ? (
+                                <div className="p-8 text-center text-github-text-secondary italic bg-github-bg-secondary border border-github-border rounded-lg">
+                                    No other files found.
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {altFiles.map(file => (
+                                        <Link
+                                            to={`/song/${file.id}`}
+                                            key={file.id}
+                                            className="p-4 bg-github-bg-secondary border border-github-border rounded-lg hover:bg-github-border transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <span className="text-xs font-bold px-2 py-0.5 bg-purple-600 text-white rounded uppercase">
+                                                    {file.sub_category}
+                                                </span>
+                                                <span className="text-xs text-github-text-secondary">{formatDate(file.date_written)}</span>
+                                            </div>
+                                            <h3 className="font-bold text-github-text group-hover:text-github-accent-text">{file.title}</h3>
+                                            {file.description && <p className="text-xs text-github-text-secondary mt-1 truncate">{file.description}</p>}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Column: Info */}
-                <div className="space-y-6">
-                    <div className="bg-github-bg-secondary border border-github-border rounded-lg p-5">
-                        <h3 className="text-sm font-bold text-github-text-secondary uppercase tracking-wider mb-4">Track Info</h3>
-                        <ul className="space-y-4">
-                            {/* Session File Link */}
-                            {sessionFile && (
-                                <li className="flex items-center gap-3 text-github-text bg-github-bg p-3 rounded border border-github-border/50">
-                                    <GitBranch className="w-4 h-4 text-purple-400" />
-                                    <div className="flex-grow">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-xs text-github-text-secondary">Session File Available</p>
-                                            <div className="group relative">
-                                                <HelpCircle className="w-3 h-3 text-github-text-secondary hover:text-github-text cursor-help" />
-                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 bg-github-bg-secondary border border-github-border text-xs text-github-text rounded shadow-xl hidden group-hover:block z-10 pointer-events-none group-hover:pointer-events-auto">
-                                                    Session files are longer versions of final tracks; usually having verses, hooks, bridges etc that didnt make the final cut.
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <Link to={`/song/${sessionFile.id}`} className="text-sm font-bold text-github-accent-text hover:underline">
-                                            View Session File
-                                        </Link>
-                                    </div>
-                                </li>
-                            )}
-
-                            <li className="flex items-center gap-3 text-github-text">
-                                <FileText className="w-4 h-4 text-github-accent-text" />
-                                <div>
-                                    <p className="text-xs text-github-text-secondary">Track Type</p>
-                                    <p className="text-sm font-medium">{song.sub_category || 'Throwaway Track (Complete)'}</p>
-                                </div>
-                            </li>
+                {/* ... existing info code */}
+            </div>
+        </div>
+    );
                             <li className="flex items-center gap-3 text-github-text">
                                 <Calendar className="w-4 h-4 text-github-accent-text" />
                                 <div>

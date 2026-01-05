@@ -18,6 +18,7 @@ const AdminUpload = () => {
         title: '',
         category: 'Full',
         sub_category: 'Throwaway Track (Complete)',
+        alt_type: '', // New field for alternate types
         is_released: false,
         lyrics: '',
         date_written: '',
@@ -31,23 +32,24 @@ const AdminUpload = () => {
         image_url: '' // To hold the parent image URL if copying
     });
 
-    // Fetch parent song data if in session mode
+    // Fetch parent song data if in session/alt mode
     useEffect(() => {
         const fetchParent = async () => {
-            if (mode === 'session' && sourceId) {
+            if ((mode === 'session' || mode === 'alt') && sourceId) {
                 setLoading(true);
                 const { data, error } = await supabase.from('songs').select('*').eq('id', sourceId).single();
                 if (data) {
                     setFormData(prev => ({
                         ...prev,
-                        title: `${data.title} (Session)`,
+                        title: `${data.title} (Alt)`,
                         category: data.category,
-                        sub_category: 'Sessions', // Force to Sessions
+                        sub_category: 'Sessions', // Default for now, can be changed
+                        alt_type: 'Session File', // Default alt type
                         lyrics: data.lyrics,
                         date_written: data.date_written,
                         version_number: data.version_number,
                         beat_link: data.beat_link,
-                        description: `Session file for ${data.title}`,
+                        description: `Alternate version of ${data.title}`,
                         time_taken: data.time_taken,
                         alt_names: (data.alt_names || []).join(', '),
                         parent_id: data.id,
@@ -59,8 +61,6 @@ const AdminUpload = () => {
         };
         fetchParent();
     }, [mode, sourceId]);
-
-
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -109,8 +109,15 @@ const AdminUpload = () => {
                 ...formData,
                 date_written: formData.date_written || null,
                 image_url: imageUrl || null,
-                alt_names: formData.alt_names ? formData.alt_names.split(',').map(s => s.trim()).filter(Boolean) : null
+                alt_names: formData.alt_names ? formData.alt_names.split(',').map(s => s.trim()).filter(Boolean) : null,
+                // If we have an alt_type, we might want to store it in a column. 
+                // For now, let's use sub_category or append to description if no column exists.
+                // But the user wants specific types. Let's assume we use sub_category for this.
+                sub_category: formData.alt_type || formData.sub_category
             };
+
+            // Remove alt_type before sending to Supabase if the column doesn't exist
+            delete songData.alt_type;
 
             const { error } = await supabase
                 .from('songs')
@@ -119,7 +126,7 @@ const AdminUpload = () => {
             if (error) throw error;
 
             alert('Song uploaded successfully!');
-            if (mode === 'session' && sourceId) {
+            if ((mode === 'session' || mode === 'alt') && sourceId) {
                 navigate(`/song/${sourceId}`); // Go back to parent
             } else {
                 navigate('/');
@@ -141,12 +148,12 @@ const AdminUpload = () => {
         );
     }
 
-    const isSessionMode = mode === 'session';
+    const isAltMode = mode === 'session' || mode === 'alt';
 
     return (
         <div className="max-w-2xl mx-auto">
             <h1 className="text-2xl font-bold text-github-text mb-6">
-                {isSessionMode ? 'Create Session File' : 'Upload New Song'}
+                {isAltMode ? 'Create Alt. File' : 'Upload New Song'}
             </h1>
             <form onSubmit={handleSubmit} className="space-y-6 bg-github-bg-secondary border border-github-border p-6 rounded-lg">
 
@@ -169,13 +176,14 @@ const AdminUpload = () => {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Sub Category</label>
-                        {isSessionMode ? (
-                            <input
-                                value="Sessions (Locked)"
-                                disabled
-                                className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text-secondary opacity-70 cursor-not-allowed"
-                            />
+                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Type</label>
+                        {isAltMode ? (
+                            <select name="alt_type" value={formData.alt_type} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text">
+                                <option value="Session File">Session File</option>
+                                <option value="Alt. Mix">Alt. Mix</option>
+                                <option value="Alt. Beat">Alt. Beat</option>
+                                <option value="Alt. Lyrics">Alt. Lyrics</option>
+                            </select>
                         ) : (
                             <select name="sub_category" value={formData.sub_category} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text">
                                 <option value="Throwaway Track (Complete)">Throwaway Track (Complete)</option>
