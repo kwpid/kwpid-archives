@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Disc, FileText, Music, Play, ExternalLink, Edit, Trash2, GitBranch, ArrowLeft, HelpCircle, Sparkles } from 'lucide-react';
+import { Calendar, Clock, Disc, FileText, Music, Play, Pause, ExternalLink, Edit, Trash2, GitBranch, ArrowLeft, HelpCircle, Sparkles, Volume2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthProvider';
 import { getSongEra } from '../lib/eraUtils';
@@ -13,6 +13,90 @@ const formatDate = (dateString) => {
         day: '2-digit',
         year: 'numeric'
     });
+};
+
+const CustomAudioPlayer = ({ src }) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const audioRef = React.useRef(null);
+
+    const togglePlay = () => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.pause();
+            } else {
+                audioRef.current.play();
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
+
+    const handleTimeUpdate = () => {
+        if (audioRef.current) {
+            setCurrentTime(audioRef.current.currentTime);
+        }
+    };
+
+    const handleLoadedMetadata = () => {
+        if (audioRef.current) {
+            setDuration(audioRef.current.duration);
+        }
+    };
+
+    const handleSeek = (e) => {
+        const time = Number(e.target.value);
+        if (audioRef.current) {
+            audioRef.current.currentTime = time;
+            setCurrentTime(time);
+        }
+    };
+
+    const formatTime = (time) => {
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60);
+        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    };
+
+    return (
+        <div className="mt-4 bg-github-bg border border-github-border rounded-lg p-3 w-full max-w-lg shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+                <Music className="w-3 h-3 text-github-accent-text" />
+                <span className="text-[10px] font-bold text-github-text-secondary uppercase tracking-wider">Legit File (Audio)</span>
+            </div>
+
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={togglePlay}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-github-accent text-white hover:bg-github-accent-hover transition-colors flex-shrink-0"
+                >
+                    {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current pl-0.5" />}
+                </button>
+
+                <div className="flex-grow flex items-center gap-2">
+                    <span className="text-xs text-github-text-secondary font-mono w-9 text-right">{formatTime(currentTime)}</span>
+                    <input
+                        type="range"
+                        min="0"
+                        max={duration || 0}
+                        value={currentTime}
+                        onChange={handleSeek}
+                        className="flex-grow h-1 bg-github-border rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-github-text [&::-webkit-slider-thumb]:rounded-full hover:[&::-webkit-slider-thumb]:bg-white"
+                    />
+                    <span className="text-xs text-github-text-secondary font-mono w-9">{formatTime(duration)}</span>
+                </div>
+            </div>
+
+            <audio
+                ref={audioRef}
+                src={src}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
+                onEnded={() => setIsPlaying(false)}
+                className="hidden"
+            />
+        </div>
+    );
 };
 
 const SongDetail = () => {
@@ -162,15 +246,7 @@ const SongDetail = () => {
                         )}
                         <p className="text-github-text-secondary text-lg mb-4">{song.description}</p>
 
-                        {song.audio_url && (
-                            <div className="mt-4 p-3 bg-github-bg-secondary border border-github-border rounded-lg inline-block w-full max-w-lg">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <Play className="w-4 h-4 text-github-accent-text" />
-                                    <span className="text-xs font-bold text-github-text-secondary uppercase tracking-wider">Legit File (Audio)</span>
-                                </div>
-                                <audio controls src={song.audio_url} className="w-full h-8" />
-                            </div>
-                        )}
+                        {song.audio_url && <CustomAudioPlayer src={song.audio_url} />}
                     </div>
                 </div>
             </div>

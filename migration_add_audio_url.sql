@@ -1,1 +1,0 @@
-ALTER TABLE songs ADD COLUMN audio_url TEXT;
