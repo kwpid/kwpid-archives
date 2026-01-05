@@ -392,6 +392,7 @@ const Albums = () => {
                         <AlbumCard
                             key={album.id}
                             album={album}
+                            onEdit={() => openEditModal(album)}
                             onCreateDeluxe={() => openCreateVersionModal(album, 'deluxe')}
                             onCreateAnniversary={() => openCreateVersionModal(album, 'anniversary')}
                         />
@@ -486,7 +487,7 @@ const Albums = () => {
     );
 };
 
-const AlbumCard = ({ album, onCreateDeluxe, onCreateAnniversary }) => {
+const AlbumCard = ({ album, onEdit, onCreateDeluxe, onCreateAnniversary }) => {
     const isStandard = album.album_type === 'standard' || !album.album_type;
     const isDeluxe = album.album_type === 'deluxe';
     const isAnniversary = album.album_type === 'anniversary';
@@ -523,8 +524,8 @@ const AlbumCard = ({ album, onCreateDeluxe, onCreateAnniversary }) => {
                 <div className="flex gap-2">
                     <button
                         onClick={(e) => {
-                            e.stopPropagation();
-                            openEditModal(album);
+                            e.preventDefault();
+                            onEdit();
                         }}
                         className="flex-1 px-2 py-1 text-xs bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors flex items-center justify-center gap-1"
                     >
