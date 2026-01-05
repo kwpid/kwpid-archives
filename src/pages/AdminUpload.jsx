@@ -110,11 +110,19 @@ const AdminUpload = () => {
                 date_written: formData.date_written || null,
                 image_url: imageUrl || null,
                 alt_names: formData.alt_names ? formData.alt_names.split(',').map(s => s.trim()).filter(Boolean) : null,
-                // If we have an alt_type, we might want to store it in a column. 
-                // For now, let's use sub_category or append to description if no column exists.
-                // But the user wants specific types. Let's assume we use sub_category for this.
                 sub_category: formData.alt_type || formData.sub_category
             };
+
+            // Ensure sub_category is a valid value for the database constraint
+            // The database might still have the old constraint if migration failed
+            // We'll map the new types to 'Sessions' if they are alt files to avoid constraint errors
+            if (isAltMode) {
+                // If it's an alt file, we use 'Sessions' as the database value 
+                // to satisfy the old constraint while keeping the UI descriptive
+                songData.sub_category = 'Sessions';
+                // Store the descriptive type in description if needed, or just rely on parent_id
+                songData.description = `[${formData.alt_type || 'Alt'}] ${songData.description}`;
+            }
 
             // Remove alt_type before sending to Supabase if the column doesn't exist
             delete songData.alt_type;
