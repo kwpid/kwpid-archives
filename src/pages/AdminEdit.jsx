@@ -10,6 +10,7 @@ const AdminEdit = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [imageFile, setImageFile] = useState(null);
+    const [audioFile, setAudioFile] = useState(null);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -24,7 +25,9 @@ const AdminEdit = () => {
         time_taken: '',
         producer: '',
         alt_names: '',
-        image_url: ''
+        alt_names: '',
+        image_url: '',
+        audio_url: ''
     });
 
     useEffect(() => {
@@ -54,7 +57,8 @@ const AdminEdit = () => {
                     time_taken: data.time_taken || '',
                     producer: data.producer || '',
                     alt_names: (data.alt_names || []).join(', '),
-                    image_url: data.image_url || ''
+                    image_url: data.image_url || '',
+                    audio_url: data.audio_url || ''
                 });
             }
             setLoading(false);
@@ -96,6 +100,26 @@ const AdminEdit = () => {
         return data.publicUrl;
     };
 
+    const uploadAudio = async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('song-files')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            throw uploadError;
+        }
+
+        const { data } = supabase.storage
+            .from('song-files')
+            .getPublicUrl(filePath);
+
+        return data.publicUrl;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
@@ -107,11 +131,17 @@ const AdminEdit = () => {
                 imageUrl = await uploadImage(imageFile);
             }
 
+            let audioUrl = formData.audio_url;
+            if (audioFile) {
+                audioUrl = await uploadAudio(audioFile);
+            }
+
             // Prepare data for insertion (convert empty date strings to null)
             const songData = {
                 ...formData,
                 date_written: formData.date_written || null,
                 image_url: imageUrl || null,
+                audio_url: audioUrl || null,
                 alt_names: formData.alt_names ? formData.alt_names.split(',').map(s => s.trim()).filter(Boolean) : null
             };
 
@@ -245,6 +275,26 @@ const AdminEdit = () => {
                         type="file"
                         accept="image/*"
                         onChange={handleFileChange}
+                        className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-github-accent file:text-white hover:file:bg-github-accent-hover"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Audio File (Legit File)</label>
+                    {formData.audio_url && !audioFile && (
+                        <div className="mb-2">
+                            <audio controls src={formData.audio_url} className="w-full mb-1" />
+                            <p className="text-xs text-github-text-secondary">Current Audio</p>
+                        </div>
+                    )}
+                    <input
+                        type="file"
+                        accept=".mp3,.wav"
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                                setAudioFile(e.target.files[0]);
+                            }
+                        }}
                         className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-github-accent file:text-white hover:file:bg-github-accent-hover"
                     />
                 </div>

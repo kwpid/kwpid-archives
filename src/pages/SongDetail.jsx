@@ -160,7 +160,17 @@ const SongDetail = () => {
                                 Also known as: {song.alt_names.join(', ')}
                             </p>
                         )}
-                        <p className="text-github-text-secondary text-lg">{song.description}</p>
+                        <p className="text-github-text-secondary text-lg mb-4">{song.description}</p>
+
+                        {song.audio_url && (
+                            <div className="mt-4 p-3 bg-github-bg-secondary border border-github-border rounded-lg inline-block w-full max-w-lg">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Play className="w-4 h-4 text-github-accent-text" />
+                                    <span className="text-xs font-bold text-github-text-secondary uppercase tracking-wider">Legit File (Audio)</span>
+                                </div>
+                                <audio controls src={song.audio_url} className="w-full h-8" />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

@@ -9,6 +9,7 @@ const AdminUpload = () => {
     const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [imageFile, setImageFile] = useState(null);
+    const [audioFile, setAudioFile] = useState(null);
 
     // Check if we are in "Create Session" mode
     const mode = searchParams.get('mode'); // 'session'
@@ -93,6 +94,26 @@ const AdminUpload = () => {
         return data.publicUrl;
     };
 
+    const uploadAudio = async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('song-files')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            throw uploadError;
+        }
+
+        const { data } = supabase.storage
+            .from('song-files')
+            .getPublicUrl(filePath);
+
+        return data.publicUrl;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -104,11 +125,18 @@ const AdminUpload = () => {
                 imageUrl = await uploadImage(imageFile);
             }
 
+            let audioUrl = null;
+            if (audioFile) {
+                audioUrl = await uploadAudio(audioFile);
+            }
+
             // Prepare data for insertion (convert empty strings to null where necessary)
             const songData = {
                 ...formData,
                 date_written: formData.date_written || null,
                 image_url: imageUrl || null,
+                audio_url: audioUrl || null,
+                alt_names: formData.alt_names ? formData.alt_names.split(',').map(s => s.trim()).filter(Boolean) : null,
                 alt_names: formData.alt_names ? formData.alt_names.split(',').map(s => s.trim()).filter(Boolean) : null,
                 sub_category: formData.alt_type || formData.sub_category
             };
@@ -266,6 +294,21 @@ const AdminUpload = () => {
                         className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-github-accent file:text-white hover:file:bg-github-accent-hover"
                     />
                     <p className="mt-1 text-xs text-github-text-secondary">Upload an image for the song cover.</p>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Audio File (Legit File)</label>
+                    <input
+                        type="file"
+                        accept=".mp3,.wav"
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                                setAudioFile(e.target.files[0]);
+                            }
+                        }}
+                        className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-github-accent file:text-white hover:file:bg-github-accent-hover"
+                    />
+                    <p className="mt-1 text-xs text-github-text-secondary">Upload an MP3 or WAV file for playback.</p>
                 </div>
 
                 <div className="pt-4">
