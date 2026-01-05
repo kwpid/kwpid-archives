@@ -33,6 +33,7 @@ const SongDetail = () => {
         const fetchSong = async () => {
             setLoading(true);
             setAltFiles([]);
+            setActiveTab('lyrics'); // Reset to lyrics tab on every song load
 
             const { data: currentSong, error } = await supabase
                 .from('songs')
@@ -164,24 +165,28 @@ const SongDetail = () => {
                 </div>
             </div>
 
-            <div className="flex border-b border-github-border mb-6">
-                <button
-                    onClick={() => setActiveTab('lyrics')}
-                    className={`px-6 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'lyrics' ? 'border-github-accent text-github-accent' : 'border-transparent text-github-text-secondary hover:text-github-text'}`}
-                >
-                    Lyrics
-                </button>
-                <button
-                    onClick={() => setActiveTab('files')}
-                    className={`px-6 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'files' ? 'border-github-accent text-github-accent' : 'border-transparent text-github-text-secondary hover:text-github-text'}`}
-                >
-                    Other Files ({altFiles.length})
-                </button>
-            </div>
+            {/* Tabs - Only show if there are alt files and this is not an alt file itself */}
+            {!song.parent_id && altFiles.length > 0 && (
+                <div className="flex border-b border-github-border mb-6">
+                    <button
+                        onClick={() => setActiveTab('lyrics')}
+                        className={`px-6 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'lyrics' ? 'border-github-accent text-github-accent' : 'border-transparent text-github-text-secondary hover:text-github-text'}`}
+                    >
+                        Lyrics
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('files')}
+                        className={`px-6 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'files' ? 'border-github-accent text-github-accent' : 'border-transparent text-github-text-secondary hover:text-github-text'}`}
+                    >
+                        Other Files ({altFiles.length})
+                    </button>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
-                    {activeTab === 'lyrics' ? (
+                    {/* Always show lyrics if no tabs, otherwise follow activeTab */}
+                    {(song.parent_id || altFiles.length === 0 || activeTab === 'lyrics') ? (
                         <div>
                             <h2 className="text-xl font-bold text-github-text mb-4 flex items-center gap-2">
                                 <FileText className="w-5 h-5" /> Lyrics
@@ -195,39 +200,33 @@ const SongDetail = () => {
                             <h2 className="text-xl font-bold text-github-text mb-4 flex items-center gap-2">
                                 <GitBranch className="w-5 h-5" /> Other Files
                             </h2>
-                            {altFiles.length === 0 ? (
-                                <div className="p-8 text-center text-github-text-secondary italic bg-github-bg-secondary border border-github-border rounded-lg">
-                                    No other files found.
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {altFiles.map(file => (
-                                        <Link
-                                            to={`/song/${file.id}`}
-                                            key={file.id}
-                                            className="p-4 bg-github-bg-secondary border border-github-border rounded-lg hover:bg-github-border transition-colors group flex gap-4"
-                                        >
-                                            <div className="w-16 h-16 bg-github-bg border border-github-border rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
-                                                {file.image_url ? (
-                                                    <img src={file.image_url} alt="" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <Music className="w-6 h-6 text-github-text-secondary" />
-                                                )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {altFiles.map(file => (
+                                    <Link
+                                        to={`/song/${file.id}`}
+                                        key={file.id}
+                                        className="p-4 bg-github-bg-secondary border border-github-border rounded-lg hover:bg-github-border transition-colors group flex gap-4"
+                                    >
+                                        <div className="w-16 h-16 bg-github-bg border border-github-border rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                            {file.image_url ? (
+                                                <img src={file.image_url} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Music className="w-6 h-6 text-github-text-secondary" />
+                                            )}
+                                        </div>
+                                        <div className="flex-grow min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-purple-600 text-white rounded uppercase whitespace-nowrap">
+                                                    {file.sub_category}
+                                                </span>
+                                                <span className="text-[10px] text-github-text-secondary">{formatDate(file.date_written)}</span>
                                             </div>
-                                            <div className="flex-grow min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-purple-600 text-white rounded uppercase whitespace-nowrap">
-                                                        {file.sub_category}
-                                                    </span>
-                                                    <span className="text-[10px] text-github-text-secondary">{formatDate(file.date_written)}</span>
-                                                </div>
-                                                <h3 className="font-bold text-github-text group-hover:text-github-accent-text truncate text-sm">{file.title}</h3>
-                                                {file.description && <p className="text-[11px] text-github-text-secondary mt-0.5 truncate">{file.description}</p>}
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
+                                            <h3 className="font-bold text-github-text group-hover:text-github-accent-text truncate text-sm">{file.title}</h3>
+                                            {file.description && <p className="text-[11px] text-github-text-secondary mt-0.5 truncate">{file.description}</p>}
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
