@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthProvider';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Plus, Edit, Trash2, Music, X, Check, Disc, Sparkles, Gift } from 'lucide-react';
+import { Plus, Edit, Trash2, Music, X, Check, Disc, Sparkles, Gift, ArrowUp, ArrowDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Albums = () => {
@@ -29,9 +29,10 @@ const Albums = () => {
     });
 
     useEffect(() => {
-        if (!isAdmin) return;
         fetchAlbums();
-        fetchSongs();
+        if (isAdmin) {
+            fetchSongs();
+        }
     }, [isAdmin]);
 
     const fetchAlbums = async () => {
@@ -337,11 +338,11 @@ const Albums = () => {
         }
     };
 
-    if (!isAdmin) {
+    if (!isAdmin && albums.length === 0 && !loading) {
         return (
-            <div className="text-center py-10">
-                <p className="text-red-500">Access Denied. You must be an admin to view this page.</p>
-                <button onClick={() => navigate('/')} className="mt-4 px-4 py-2 bg-github-border rounded text-github-text">Go Home</button>
+            <div className="bg-github-bg-secondary border border-github-border rounded-lg p-12 text-center">
+                <Disc className="w-16 h-16 text-github-text-secondary mx-auto mb-4 opacity-50" />
+                <p className="text-github-text-secondary">No albums available yet.</p>
             </div>
         );
     }
@@ -359,32 +360,36 @@ const Albums = () => {
                         Album Releases
                     </h1>
                     <p className="text-github-text-secondary text-sm mt-1">
-                        Create and manage albums, assign tracks from your archive
+                        {isAdmin ? 'Create and manage albums, assign tracks from your archive' : 'Explore discography and official releases'}
                     </p>
                 </div>
-                <button
-                    onClick={() => {
-                        setFormData({ name: '', release_date: '', cover_image_url: '' });
-                        setImageFile(null);
-                        setShowCreateModal(true);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-github-accent text-white rounded-md hover:bg-github-accent/90 transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                    Create Album
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={() => {
+                            setFormData({ name: '', release_date: '', cover_image_url: '' });
+                            setImageFile(null);
+                            setShowCreateModal(true);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-github-accent text-white rounded-md hover:bg-github-accent/90 transition-colors"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Create Album
+                    </button>
+                )}
             </div>
 
             {albums.length === 0 ? (
                 <div className="bg-github-bg-secondary border border-github-border rounded-lg p-12 text-center">
                     <Disc className="w-16 h-16 text-github-text-secondary mx-auto mb-4 opacity-50" />
                     <p className="text-github-text-secondary mb-4">No albums created yet.</p>
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="px-4 py-2 bg-github-accent text-white rounded-md hover:bg-github-accent/90 transition-colors"
-                    >
-                        Create Your First Album
-                    </button>
+                    {isAdmin && (
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="px-4 py-2 bg-github-accent text-white rounded-md hover:bg-github-accent/90 transition-colors"
+                        >
+                            Create Your First Album
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -392,6 +397,7 @@ const Albums = () => {
                         <AlbumCard
                             key={album.id}
                             album={album}
+                            isAdmin={isAdmin}
                             onEdit={() => openEditModal(album)}
                             onCreateDeluxe={() => openCreateVersionModal(album, 'deluxe')}
                             onCreateAnniversary={() => openCreateVersionModal(album, 'anniversary')}
@@ -487,7 +493,7 @@ const Albums = () => {
     );
 };
 
-const AlbumCard = ({ album, onEdit, onCreateDeluxe, onCreateAnniversary }) => {
+const AlbumCard = ({ album, isAdmin, onEdit, onCreateDeluxe, onCreateAnniversary }) => {
     const isStandard = album.album_type === 'standard' || !album.album_type;
     const isDeluxe = album.album_type === 'deluxe';
     const isAnniversary = album.album_type === 'anniversary';
@@ -520,53 +526,55 @@ const AlbumCard = ({ album, onEdit, onCreateDeluxe, onCreateAnniversary }) => {
                     </h3>
                 </div>
             </Link>
-            <div className="mt-2 flex flex-col gap-2">
-                <div className="flex gap-2">
-                    <button
-                        onClick={(e) => {
-                            e.preventDefault();
-                            onEdit();
-                        }}
-                        className="flex-1 px-2 py-1 text-xs bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors flex items-center justify-center gap-1"
-                    >
-                        <Edit className="w-3 h-3" />
-                        Edit
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteAlbum(album.id);
-                        }}
-                        className="px-2 py-1 text-xs bg-red-900/20 border border-red-900/50 text-red-500 rounded hover:bg-red-900/30 transition-colors flex items-center justify-center"
-                    >
-                        <Trash2 className="w-3 h-3" />
-                    </button>
-                </div>
-                {isStandard && (
+            {isAdmin && (
+                <div className="mt-2 flex flex-col gap-2">
                     <div className="flex gap-2">
                         <button
                             onClick={(e) => {
-                                e.stopPropagation();
-                                onCreateDeluxe();
+                                e.preventDefault();
+                                onEdit();
                             }}
-                            className="flex-1 px-2 py-1 text-xs bg-purple-600/20 border border-purple-600/50 text-purple-400 rounded hover:bg-purple-600/30 transition-colors flex items-center justify-center gap-1"
+                            className="flex-1 px-2 py-1 text-xs bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors flex items-center justify-center gap-1"
                         >
-                            <Sparkles className="w-3 h-3" />
-                            Deluxe
+                            <Edit className="w-3 h-3" />
+                            Edit
                         </button>
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onCreateAnniversary();
+                                handleDeleteAlbum(album.id);
                             }}
-                            className="flex-1 px-2 py-1 text-xs bg-yellow-600/20 border border-yellow-600/50 text-yellow-400 rounded hover:bg-yellow-600/30 transition-colors flex items-center justify-center gap-1"
+                            className="px-2 py-1 text-xs bg-red-900/20 border border-red-900/50 text-red-500 rounded hover:bg-red-900/30 transition-colors flex items-center justify-center"
                         >
-                            <Gift className="w-3 h-3" />
-                            Anniversary
+                            <Trash2 className="w-3 h-3" />
                         </button>
                     </div>
-                )}
-            </div>
+                    {isStandard && (
+                        <div className="flex gap-2">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCreateDeluxe();
+                                }}
+                                className="flex-1 px-2 py-1 text-xs bg-purple-600/20 border border-purple-600/50 text-purple-400 rounded hover:bg-purple-600/30 transition-colors flex items-center justify-center gap-1"
+                            >
+                                <Sparkles className="w-3 h-3" />
+                                Deluxe
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCreateAnniversary();
+                                }}
+                                className="flex-1 px-2 py-1 text-xs bg-yellow-600/20 border border-yellow-600/50 text-yellow-400 rounded hover:bg-yellow-600/30 transition-colors flex items-center justify-center gap-1"
+                            >
+                                <Gift className="w-3 h-3" />
+                                Anniversary
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
