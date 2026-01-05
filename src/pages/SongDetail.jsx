@@ -227,7 +227,7 @@ const SongDetail = () => {
                                 <FileText className="w-4 h-4 text-github-accent-text" />
                                 <div>
                                     <p className="text-xs text-github-text-secondary">Track Type</p>
-                                    <p className="text-sm font-medium">{song.sub_category || 'Standard'}</p>
+                                    <p className="text-sm font-medium">{song.sub_category || 'Throwaway Track (Complete)'}</p>
                                 </div>
                             </li>
                             <li className="flex items-center gap-3 text-github-text">
