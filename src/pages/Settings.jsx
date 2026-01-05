@@ -27,7 +27,7 @@ const Settings = () => {
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-            
+
             // Fetch songs
             const { data: songsData, error: songsError } = await supabase
                 .from('songs')
@@ -109,124 +109,114 @@ const Settings = () => {
             s.category === 'Full'
         );
 
-        // Create a map of song_id -> album name
-        const songToAlbum = {};
-        albumTracks.forEach(track => {
-            const album = albums.find(a => a.id === track.album_id);
-            if (album) {
-                songToAlbum[track.song_id] = album.name;
+        // Get sessions to map to parents
+        const sessions = songs.filter(s => s.sub_category === 'Sessions');
+        const sessionsMap = {};
+        sessions.forEach(session => {
+            if (session.parent_id) {
+                if (!sessionsMap[session.parent_id]) {
+                    sessionsMap[session.parent_id] = [];
+                }
+                sessionsMap[session.parent_id].push(session);
             }
         });
 
-        // Sort songs from oldest to newest
-        const sortedSongs = [...fullSongs].sort((a, b) => {
-            const dateA = a.date_written || a.created_at;
-            const dateB = b.date_written || b.created_at;
-            if (!dateA) return 1;
-            if (!dateB) return -1;
-            return new Date(dateA) - new Date(dateB);
-        });
+        // Filter out deluxe and anniversary albums - only standard albums determine eras
+        const standardAlbums = albums.filter(a =>
+            a.album_type === 'standard' || !a.album_type
+        );
+
+        // Sort albums by release date
+        const sortedAlbums = [...standardAlbums].sort((a, b) =>
+            new Date(a.release_date) - new Date(b.release_date)
+        );
 
         // Define the Early Era cutoff date (11/20/2025)
         const earlyEraCutoff = new Date('2025-11-20T23:59:59');
 
         // Group songs into eras
-        const earlyEraSongs = [];
-        const postEarlySongs = [];
-
-        sortedSongs.forEach(song => {
-            const songDate = new Date(song.date_written || song.created_at);
-            if (songDate <= earlyEraCutoff) {
-                earlyEraSongs.push(song);
-            } else {
-                postEarlySongs.push(song);
-            }
-        });
-
-        // Filter out deluxe and anniversary albums - only standard albums determine eras
-        const standardAlbums = albums.filter(a => 
-            a.album_type === 'standard' || !a.album_type
-        );
-
-        // Sort albums by release date
-        const sortedAlbums = [...standardAlbums].sort((a, b) => 
-            new Date(a.release_date) - new Date(b.release_date)
-        );
-
-        // Create era boundaries based on albums
         const eras = [];
-        
-        // Early Era
-        if (earlyEraSongs.length > 0) {
-            eras.push({
-                name: 'Early Era',
-                songs: earlyEraSongs,
-                startDate: null,
-                endDate: earlyEraCutoff
+
+        // Helper to add songs to eras based on date ranges
+        const addEra = (name, startDate, endDate) => {
+            const eraSongs = fullSongs.filter(song => {
+                const songDate = new Date(song.date_written || song.created_at);
+                if (startDate && endDate) {
+                    return songDate >= startDate && songDate < endDate;
+                } else if (startDate) {
+                    return songDate >= startDate;
+                } else if (endDate) {
+                    return songDate <= endDate;
+                }
+                return false;
             });
-        }
 
-        // Album-based eras
-        if (sortedAlbums.length > 0 && postEarlySongs.length > 0) {
-            // Process each album era
-            for (let i = 0; i < sortedAlbums.length; i++) {
-                const album = sortedAlbums[i];
-                const albumDate = new Date(album.release_date);
-                const nextAlbumDate = i < sortedAlbums.length - 1 
-                    ? new Date(sortedAlbums[i + 1].release_date)
-                    : null;
-
-                // For the first album: include songs from 11/21/2025 to next album (or end)
-                // For subsequent albums: include songs from this album release to next album (or end)
-                const eraSongs = postEarlySongs.filter(song => {
-                    const songDate = new Date(song.date_written || song.created_at);
-                    if (i === 0) {
-                        // First album era: from 11/21/2025 to next album release (or end)
-                        const startDate = new Date('2025-11-21');
-                        if (nextAlbumDate === null) {
-                            return songDate >= startDate;
-                        } else {
-                            return songDate >= startDate && songDate < nextAlbumDate;
-                        }
-                    } else {
-                        // Subsequent albums: from this album release to next album release (or end)
-                        if (nextAlbumDate === null) {
-                            return songDate >= albumDate;
-                        } else {
-                            return songDate >= albumDate && songDate < nextAlbumDate;
-                        }
-                    }
+            if (eraSongs.length > 0) {
+                // Sort songs from oldest to newest within the era
+                eraSongs.sort((a, b) => {
+                    const dateA = new Date(a.date_written || a.created_at);
+                    const dateB = new Date(b.date_written || b.created_at);
+                    return dateA - dateB;
                 });
 
-                if (eraSongs.length > 0) {
-                    eras.push({
-                        name: `${album.name} Era`,
-                        songs: eraSongs,
-                        startDate: i === 0 ? new Date('2025-11-21') : albumDate,
-                        endDate: nextAlbumDate
-                    });
-                }
+                eras.push({
+                    name,
+                    songs: eraSongs
+                });
             }
-        } else if (postEarlySongs.length > 0) {
-            // No albums, but there are post-early songs - put them in a default era
-            eras.push({
-                name: 'Post Early Era',
-                songs: postEarlySongs,
-                startDate: new Date('2025-11-21'),
-                endDate: null
-            });
+        };
+
+        // 1. Early Era
+        addEra('Early Era', null, earlyEraCutoff);
+
+        // 2. Album Eras
+        for (let i = 0; i < sortedAlbums.length; i++) {
+            const album = sortedAlbums[i];
+            const albumDate = new Date(album.release_date);
+            const nextAlbumDate = i < sortedAlbums.length - 1
+                ? new Date(sortedAlbums[i + 1].release_date)
+                : null;
+
+            // Start date logic: First album starts 11/21/2025, others start at release
+            const startDate = i === 0 ? new Date('2025-11-21') : albumDate;
+
+            addEra(`${album.name} Era`, startDate, nextAlbumDate);
         }
+
+        // 3. Post Early Era (if no albums or after last album)
+        // Check for any songs after the last album (or after early era if no albums)
+        let lastDate = sortedAlbums.length > 0
+            ? new Date(sortedAlbums[sortedAlbums.length - 1].release_date)
+            : new Date('2025-11-21');
+
+        // If we have albums, the loop covered up to the last album's "era" (which goes to infinity if nextAlbumDate is null)
+        // But wait, the loop used `nextAlbumDate`. For the last album, `nextAlbumDate` is null, so it captures everything after.
+        // So we might not need "Post Early Era" logic separately if albums exist.
+        // BUT if no albums exist, we need to capture "Post Early Era".
+
+        if (sortedAlbums.length === 0) {
+            addEra('Post Early Era', new Date('2025-11-21'), null);
+        }
+
 
         // Format the output
         let result = '';
+
+        const totalSessions = sessions.length;
+        // Total full songs is just fullSongs.length
+
+        result += `**Total Complete Songs: ${fullSongs.length}**\n`;
+        result += `**Total Sessions: ${totalSessions}**\n\n`;
+
         eras.forEach(era => {
-            result += `-- ${era.name}\n`;
-            era.songs.forEach(song => {
+            result += `# ${era.name}\n`;
+            era.songs.forEach((song, index) => {
                 const date = formatDate(song.date_written || song.created_at);
-                const producer = song.producer ? ` [prod. ${song.producer}]` : '';
-                const albumName = songToAlbum[song.id] || 'Unreleased';
-                
-                result += `${song.title}${producer} (${date}) - ${albumName}\n`;
+                const producer = song.producer ? ` \`prod. ${song.producer}\`` : '';
+                const hasSession = sessionsMap[song.id] && sessionsMap[song.id].length > 0;
+                const sessionStr = hasSession ? ' [+ Session]' : '';
+
+                result += `${index + 1}. **${song.title}**${producer} (${date})${sessionStr}\n`;
             });
             result += '\n';
         });

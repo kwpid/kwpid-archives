@@ -40,7 +40,7 @@ const Archive = () => {
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-            
+
             // Fetch songs
             let query = supabase
                 .from('songs')
@@ -154,6 +154,7 @@ const Archive = () => {
             if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
             return 0;
         });
+
 
     return (
         <div>
