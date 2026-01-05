@@ -24,7 +24,8 @@ const Albums = () => {
         cover_image_url: '',
         album_type: 'standard',
         parent_album_id: null,
-        status: 'Unreleased'
+        status: 'Unreleased',
+        selectedSongs: []
     });
 
     useEffect(() => {
@@ -111,6 +112,7 @@ const Albums = () => {
             const newAlbumId = insertedData?.id;
             
             // If this is a deluxe/anniversary version, copy tracks from parent album
+            let finalTracks = [];
             if (formData.parent_album_id && newAlbumId) {
                 const { data: parentTracks } = await supabase
                     .from('album_tracks')
@@ -118,22 +120,39 @@ const Albums = () => {
                     .eq('album_id', formData.parent_album_id);
 
                 if (parentTracks && parentTracks.length > 0) {
-                    const tracks = parentTracks.map(track => ({
+                    finalTracks = parentTracks.map(track => ({
                         album_id: newAlbumId,
                         song_id: track.song_id,
                         track_number: track.track_number
                     }));
-
-                    await supabase
-                        .from('album_tracks')
-                        .insert(tracks);
                 }
+            }
+
+            // Add manually selected tracks
+            if (formData.selectedSongs && formData.selectedSongs.length > 0) {
+                const startNum = finalTracks.length + 1;
+                formData.selectedSongs.forEach((songId, index) => {
+                    // Avoid duplicates if already copied from parent
+                    if (!finalTracks.some(t => t.song_id === songId)) {
+                        finalTracks.push({
+                            album_id: newAlbumId,
+                            song_id: songId,
+                            track_number: startNum + index
+                        });
+                    }
+                });
+            }
+
+            if (finalTracks.length > 0) {
+                await supabase
+                    .from('album_tracks')
+                    .insert(finalTracks);
             }
 
             alert('Album created successfully!');
             setShowCreateModal(false);
             setShowCreateVersionModal(false);
-            setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased' });
+            setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased', selectedSongs: [] });
             setImageFile(null);
             setSelectedAlbum(null);
             fetchAlbums();
@@ -170,22 +189,31 @@ const Albums = () => {
                 })
                 .eq('id', selectedAlbum.id);
 
+            // Update album tracks
+            await supabase
+                .from('album_tracks')
+                .delete()
+                .eq('album_id', selectedAlbum.id);
+
+            if (formData.selectedSongs && formData.selectedSongs.length > 0) {
+                const tracks = formData.selectedSongs.map((songId, index) => ({
+                    album_id: selectedAlbum.id,
+                    song_id: songId,
+                    track_number: index + 1
+                }));
+
+                await supabase
+                    .from('album_tracks')
+                    .insert(tracks);
+            }
+
             // If album status changed to "Released", update all songs in the album
             if (formData.status === 'Released' && selectedAlbum.status !== 'Released') {
-                // Get all song IDs in this album
-                const { data: albumTracks } = await supabase
-                    .from('album_tracks')
-                    .select('song_id')
-                    .eq('album_id', selectedAlbum.id);
-
-                if (albumTracks && albumTracks.length > 0) {
-                    const songIds = albumTracks.map(track => track.song_id);
-                    
-                    // Update all songs to "Released" status
+                if (formData.selectedSongs && formData.selectedSongs.length > 0) {
                     await supabase
                         .from('songs')
                         .update({ sub_category: 'Released' })
-                        .in('id', songIds);
+                        .in('id', formData.selectedSongs);
                 }
             }
 
@@ -194,7 +222,7 @@ const Albums = () => {
             alert('Album updated successfully!');
             setShowEditModal(false);
             setSelectedAlbum(null);
-            setFormData({ name: '', release_date: '', cover_image_url: '' });
+            setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased', selectedSongs: [] });
             setImageFile(null);
             fetchAlbums();
         } catch (error) {
@@ -221,15 +249,26 @@ const Albums = () => {
         }
     };
 
-    const openEditModal = (album) => {
+    const openEditModal = async (album) => {
         setSelectedAlbum(album);
+        
+        // Fetch current tracks
+        const { data: trackData } = await supabase
+            .from('album_tracks')
+            .select('song_id')
+            .eq('album_id', album.id)
+            .order('track_number', { ascending: true });
+
+        const selectedSongs = trackData ? trackData.map(t => t.song_id) : [];
+
         setFormData({
             name: album.name,
             release_date: album.release_date,
             cover_image_url: album.cover_image_url || '',
             album_type: album.album_type || 'standard',
             parent_album_id: album.parent_album_id || null,
-            status: album.status || 'Unreleased'
+            status: album.status || 'Unreleased',
+            selectedSongs: selectedSongs
         });
         setImageFile(null);
         setShowEditModal(true);
@@ -247,7 +286,8 @@ const Albums = () => {
             cover_image_url: album.cover_image_url || '',
             album_type: versionType,
             parent_album_id: album.id,
-            status: 'Unreleased'
+            status: 'Unreleased',
+            selectedSongs: []
         });
         setImageFile(null);
         setShowCreateVersionModal(true);
@@ -370,13 +410,14 @@ const Albums = () => {
                     onSubmit={handleCreateAlbum}
                     onClose={() => {
                         setShowCreateModal(false);
-                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased' });
+                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased', selectedSongs: [] });
                         setImageFile(null);
                     }}
                     isCreateVersion={false}
                     albums={albums}
                     loading={loading}
                     selectedAlbumId={null}
+                    songs={songs}
                 />
             )}
 
@@ -392,7 +433,7 @@ const Albums = () => {
                     onClose={() => {
                         setShowEditModal(false);
                         setSelectedAlbum(null);
-                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased' });
+                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased', selectedSongs: [] });
                         setImageFile(null);
                     }}
                     loading={loading}
@@ -400,6 +441,7 @@ const Albums = () => {
                     isCreateVersion={false}
                     albums={albums}
                     selectedAlbumId={selectedAlbum?.id || null}
+                    songs={songs}
                 />
             )}
 
@@ -415,7 +457,7 @@ const Albums = () => {
                     onClose={() => {
                         setShowCreateVersionModal(false);
                         setSelectedAlbum(null);
-                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased' });
+                        setFormData({ name: '', release_date: '', cover_image_url: '', album_type: 'standard', parent_album_id: null, status: 'Unreleased', selectedSongs: [] });
                         setImageFile(null);
                     }}
                     loading={loading}
@@ -423,6 +465,7 @@ const Albums = () => {
                     isCreateVersion={true}
                     albums={albums}
                     selectedAlbumId={null}
+                    songs={songs}
                 />
             )}
 
@@ -476,35 +519,58 @@ const AlbumCard = ({ album, onCreateDeluxe, onCreateAnniversary }) => {
                     </h3>
                 </div>
             </Link>
-            {isStandard && (
-                <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex flex-col gap-2">
+                <div className="flex gap-2">
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            onCreateDeluxe();
+                            openEditModal(album);
                         }}
-                        className="flex-1 px-2 py-1 text-xs bg-purple-600/20 border border-purple-600/50 text-purple-400 rounded hover:bg-purple-600/30 transition-colors flex items-center justify-center gap-1"
+                        className="flex-1 px-2 py-1 text-xs bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors flex items-center justify-center gap-1"
                     >
-                        <Sparkles className="w-3 h-3" />
-                        Deluxe
+                        <Edit className="w-3 h-3" />
+                        Edit
                     </button>
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            onCreateAnniversary();
+                            handleDeleteAlbum(album.id);
                         }}
-                        className="flex-1 px-2 py-1 text-xs bg-yellow-600/20 border border-yellow-600/50 text-yellow-400 rounded hover:bg-yellow-600/30 transition-colors flex items-center justify-center gap-1"
+                        className="px-2 py-1 text-xs bg-red-900/20 border border-red-900/50 text-red-500 rounded hover:bg-red-900/30 transition-colors flex items-center justify-center"
                     >
-                        <Gift className="w-3 h-3" />
-                        Anniversary
+                        <Trash2 className="w-3 h-3" />
                     </button>
                 </div>
-            )}
+                {isStandard && (
+                    <div className="flex gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCreateDeluxe();
+                            }}
+                            className="flex-1 px-2 py-1 text-xs bg-purple-600/20 border border-purple-600/50 text-purple-400 rounded hover:bg-purple-600/30 transition-colors flex items-center justify-center gap-1"
+                        >
+                            <Sparkles className="w-3 h-3" />
+                            Deluxe
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCreateAnniversary();
+                            }}
+                            className="flex-1 px-2 py-1 text-xs bg-yellow-600/20 border border-yellow-600/50 text-yellow-400 rounded hover:bg-yellow-600/30 transition-colors flex items-center justify-center gap-1"
+                        >
+                            <Gift className="w-3 h-3" />
+                            Anniversary
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
-const AlbumModal = ({ title, formData, setFormData, imageFile, setImageFile, onSubmit, onClose, loading, existingImageUrl, isCreateVersion = false, albums = [], selectedAlbumId = null }) => {
+const AlbumModal = ({ title, formData, setFormData, imageFile, setImageFile, onSubmit, onClose, loading, existingImageUrl, isCreateVersion = false, albums = [], selectedAlbumId = null, songs = [] }) => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -516,9 +582,21 @@ const AlbumModal = ({ title, formData, setFormData, imageFile, setImageFile, onS
         }
     };
 
+    const toggleSong = (songId) => {
+        setFormData(prev => {
+            const selectedSongs = prev.selectedSongs || [];
+            return {
+                ...prev,
+                selectedSongs: selectedSongs.includes(songId)
+                    ? selectedSongs.filter(id => id !== songId)
+                    : [...selectedSongs, songId]
+            };
+        });
+    };
+
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-github-bg-secondary border border-github-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-github-bg-secondary border border-github-border rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-github-text">{title}</h2>
                     <button onClick={onClose} className="text-github-text-secondary hover:text-github-text">
@@ -527,100 +605,123 @@ const AlbumModal = ({ title, formData, setFormData, imageFile, setImageFile, onS
                 </div>
 
                 <form onSubmit={onSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Album Name</label>
-                        <input
-                            name="name"
-                            required
-                            value={formData.name}
-                            onChange={handleChange}
-                            className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-github-text-secondary mb-1">Release Date</label>
-                            <input
-                                type="date"
-                                name="release_date"
-                                required
-                                value={formData.release_date}
-                                onChange={handleChange}
-                                className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-github-text-secondary mb-1">Status</label>
-                            <select
-                                name="status"
-                                value={formData.status || 'Unreleased'}
-                                onChange={handleChange}
-                                className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
-                            >
-                                <option value="Unreleased">Unreleased</option>
-                                <option value="Released">Released</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {!isCreateVersion && (
-                        <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-github-text-secondary mb-1">Album Type</label>
-                                <select
-                                    name="album_type"
-                                    value={formData.album_type || 'standard'}
+                                <label className="block text-sm font-medium text-github-text-secondary mb-1">Album Name</label>
+                                <input
+                                    name="name"
+                                    required
+                                    value={formData.name}
                                     onChange={handleChange}
                                     className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
-                                >
-                                    <option value="standard">Standard</option>
-                                    <option value="deluxe">Deluxe</option>
-                                    <option value="anniversary">Anniversary</option>
-                                </select>
+                                />
                             </div>
 
-                            {formData.album_type !== 'standard' && (
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Based On Album</label>
+                                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Release Date</label>
+                                    <input
+                                        type="date"
+                                        name="release_date"
+                                        required
+                                        value={formData.release_date}
+                                        onChange={handleChange}
+                                        className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-github-text-secondary mb-1">Status</label>
                                     <select
-                                        name="parent_album_id"
-                                        value={formData.parent_album_id || ''}
+                                        name="status"
+                                        value={formData.status || 'Unreleased'}
                                         onChange={handleChange}
                                         className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
                                     >
-                                        <option value="">Select parent album...</option>
-                                        {albums.filter(a => (a.album_type === 'standard' || !a.album_type) && a.id !== selectedAlbumId).map(album => (
-                                            <option key={album.id} value={album.id}>{album.name}</option>
-                                        ))}
+                                        <option value="Unreleased">Unreleased</option>
+                                        <option value="Released">Released</option>
                                     </select>
-                                    <p className="mt-1 text-xs text-github-text-secondary">Select the original album this version is based on</p>
                                 </div>
-                            )}
-                        </>
-                    )}
-
-                    {isCreateVersion && (
-                        <div className="bg-github-bg border border-github-border rounded p-3">
-                            <p className="text-xs text-github-text-secondary mb-1">This version will include all tracks from the parent album.</p>
-                            <p className="text-xs text-github-text-secondary">You can add additional tracks after creation.</p>
-                        </div>
-                    )}
-
-                    <div>
-                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Cover Image</label>
-                        {existingImageUrl && !imageFile && (
-                            <div className="mb-2">
-                                <img src={existingImageUrl} alt="Current" className="h-20 w-20 object-cover rounded border border-github-border" />
-                                <p className="text-xs text-github-text-secondary">Current Image</p>
                             </div>
-                        )}
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                            className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-github-accent file:text-white hover:file:bg-github-accent-hover"
-                        />
+
+                            {!isCreateVersion && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-github-text-secondary mb-1">Album Type</label>
+                                        <select
+                                            name="album_type"
+                                            value={formData.album_type || 'standard'}
+                                            onChange={handleChange}
+                                            className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
+                                        >
+                                            <option value="standard">Standard</option>
+                                            <option value="deluxe">Deluxe</option>
+                                            <option value="anniversary">Anniversary</option>
+                                        </select>
+                                    </div>
+
+                                    {formData.album_type !== 'standard' && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-github-text-secondary mb-1">Based On Album</label>
+                                            <select
+                                                name="parent_album_id"
+                                                value={formData.parent_album_id || ''}
+                                                onChange={handleChange}
+                                                className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text"
+                                            >
+                                                <option value="">Select parent album...</option>
+                                                {albums.filter(a => (a.album_type === 'standard' || !a.album_type) && a.id !== selectedAlbumId).map(album => (
+                                                    <option key={album.id} value={album.id}>{album.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium text-github-text-secondary mb-1">Cover Image</label>
+                                {existingImageUrl && !imageFile && (
+                                    <div className="mb-2">
+                                        <img src={existingImageUrl} alt="Current" className="h-20 w-20 object-cover rounded border border-github-border" />
+                                    </div>
+                                )}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-github-accent file:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-github-text-secondary">Select Tracks</label>
+                            <div className="bg-github-bg border border-github-border rounded p-3 h-[300px] overflow-y-auto space-y-1">
+                                {songs.map(song => {
+                                    const isSelected = (formData.selectedSongs || []).includes(song.id);
+                                    return (
+                                        <div
+                                            key={song.id}
+                                            onClick={() => toggleSong(song.id)}
+                                            className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-github-border/30 transition-colors ${
+                                                isSelected ? 'bg-github-accent/20 border border-github-accent/30' : 'border border-transparent'
+                                            }`}
+                                        >
+                                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                                isSelected ? 'bg-github-accent border-github-accent' : 'border-github-border'
+                                            }`}>
+                                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                                            </div>
+                                            <span className="text-sm text-github-text truncate">{song.title}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <p className="text-[10px] text-github-text-secondary">
+                                {(formData.selectedSongs || []).length} tracks selected
+                            </p>
+                        </div>
                     </div>
 
                     <div className="flex gap-3 pt-4">
@@ -636,7 +737,7 @@ const AlbumModal = ({ title, formData, setFormData, imageFile, setImageFile, onS
                             disabled={loading}
                             className="flex-1 px-4 py-2 bg-github-accent hover:bg-github-accent-hover disabled:bg-opacity-50 text-white rounded transition-colors"
                         >
-                            {loading ? 'Saving...' : 'Save'}
+                            {loading ? 'Saving...' : 'Save Album'}
                         </button>
                     </div>
                 </form>
