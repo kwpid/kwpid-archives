@@ -107,7 +107,6 @@ const AdminUpload = () => {
             const songData = {
                 ...formData,
                 date_written: formData.date_written || null,
-                date_written: formData.date_written || null,
                 image_url: imageUrl || null,
                 alt_names: formData.alt_names ? formData.alt_names.split(',').map(s => s.trim()).filter(Boolean) : null
             };

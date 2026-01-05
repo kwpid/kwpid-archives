@@ -21,7 +21,6 @@ const AdminEdit = () => {
         beat_link: '',
         description: '',
         time_taken: '',
-        time_taken: '',
         producer: '',
         alt_names: '',
         image_url: ''
