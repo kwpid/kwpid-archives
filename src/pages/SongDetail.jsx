@@ -4,11 +4,9 @@ import { Calendar, Clock, Disc, FileText, Music, Play, ExternalLink, Edit, Trash
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthProvider';
 import { getSongEra } from '../lib/eraUtils';
-import { getSongDisplayImage } from '../lib/songImageUtils';
 
 const formatDate = (dateString) => {
     if (!dateString) return 'Unknown Date';
-    // Append T12:00:00 to ensure it falls in the middle of the day, avoiding timezone issues
     const date = new Date(`${dateString}T12:00:00`);
     return date.toLocaleDateString('en-US', {
         month: '2-digit',
@@ -21,17 +19,21 @@ const SongDetail = () => {
     const { id } = useParams();
     const { isAdmin } = useAuth();
     const navigate = useNavigate();
+    const [song, setSong] = useState(null);
     const [loading, setLoading] = useState(true);
     const [altFiles, setAltFiles] = useState([]);
     const [activeTab, setActiveTab] = useState('lyrics');
     const [isDeleting, setIsDeleting] = useState(false);
+    const [album, setAlbum] = useState(null);
+    const [albums, setAlbums] = useState([]);
+    const [era, setEra] = useState(null);
+    const [displayImage, setDisplayImage] = useState(null);
 
     useEffect(() => {
         const fetchSong = async () => {
             setLoading(true);
             setAltFiles([]);
 
-            // 1. Fetch current song
             const { data: currentSong, error } = await supabase
                 .from('songs')
                 .select('*')
@@ -43,7 +45,6 @@ const SongDetail = () => {
             } else if (currentSong) {
                 setSong(currentSong);
 
-                // 2. Logic to find related alt files (Sessions, Mixes, etc.)
                 const { data: relatedFiles } = await supabase
                     .from('songs')
                     .select('*')
@@ -54,21 +55,59 @@ const SongDetail = () => {
                     setAltFiles(relatedFiles);
                 }
 
-                // ... (rest of fetch logic)
+                const { data: albumsData } = await supabase
+                    .from('albums')
+                    .select('*');
+
+                if (albumsData) {
+                    setAlbums(albumsData || []);
+                    if (currentSong.category === 'Full') {
+                        setEra(getSongEra(currentSong, albumsData));
+                    }
+                }
+
+                const { data: albumTrack } = await supabase
+                    .from('album_tracks')
+                    .select('album_id, albums(id, cover_image_url, name)')
+                    .eq('song_id', currentSong.id)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (albumTrack && albumTrack.albums) {
+                    const albumData = albumTrack.albums;
+                    setAlbum({ id: albumData.id, name: albumData.name, cover_image_url: albumData.cover_image_url });
+                    setDisplayImage(albumData.cover_image_url || currentSong.image_url);
+                } else {
+                    setDisplayImage(currentSong.image_url);
+                }
             }
             setLoading(false);
         };
-        // ...
+
+        if (id) {
+            fetchSong();
+        }
     }, [id]);
 
-    // ... (inside return)
-    const isAlt = song.sub_category === 'Sessions' || song.sub_category.startsWith('Alt.');
+    const handleDelete = async () => {
+        if (!confirm('Are you sure you want to DELETE this song? This action cannot be undone.')) return;
+        setIsDeleting(true);
+        const { error } = await supabase.from('songs').delete().eq('id', id);
+        if (error) {
+            alert('Error deleting song: ' + error.message);
+            setIsDeleting(false);
+        } else {
+            alert('Song deleted.');
+            navigate('/');
+        }
+    };
+
+    if (loading) return <div className="p-8 text-center text-github-text-secondary">Loading song details...</div>;
+    if (!song) return <div className="p-8 text-center text-github-text-secondary">Song not found.</div>;
 
     return (
         <div>
-            {/* Header / Hero */}
             <div className="relative mb-8">
-                {/* Back Link for Alt Files */}
                 {song.parent_id && (
                     <div className="mb-4">
                         <Link to={`/song/${song.parent_id}`} className="inline-flex items-center gap-2 text-github-text-secondary hover:text-github-accent-text text-sm mb-2">
@@ -94,7 +133,6 @@ const SongDetail = () => {
                                 {song.version_number && <span className="text-xs text-github-text-secondary">v{song.version_number}</span>}
                             </div>
 
-                            {/* Admin Controls */}
                             {isAdmin && (
                                 <div className="flex gap-2">
                                     {!song.parent_id && (
@@ -105,18 +143,27 @@ const SongDetail = () => {
                                     <Link to={`/edit/${id}`} className="flex items-center gap-2 px-3 py-1 bg-github-bg border border-github-border text-github-text rounded hover:bg-github-border transition-colors text-sm">
                                         <Edit className="w-4 h-4" /> <span className="hidden sm:inline">Edit</span>
                                     </Link>
-                                    {/* ... delete btn */}
+                                    <button
+                                        onClick={handleDelete}
+                                        disabled={isDeleting}
+                                        className="flex items-center gap-2 px-3 py-1 bg-red-900/30 border border-red-900/50 text-red-500 rounded hover:bg-red-900/50 transition-colors text-sm"
+                                    >
+                                        <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Delete</span>
+                                    </button>
                                 </div>
                             )}
                         </div>
-
                         <h1 className="text-4xl md:text-5xl font-extrabold text-github-text tracking-tight mb-2">{song.title}</h1>
-                        {/* ... description */}
+                        {song.alt_names && song.alt_names.length > 0 && (
+                            <p className="text-github-text-secondary text-sm mb-2 italic">
+                                Also known as: {song.alt_names.join(', ')}
+                            </p>
+                        )}
+                        <p className="text-github-text-secondary text-lg">{song.description}</p>
                     </div>
                 </div>
             </div>
 
-            {/* Tabs */}
             <div className="flex border-b border-github-border mb-6">
                 <button
                     onClick={() => setActiveTab('lyrics')}
@@ -133,7 +180,6 @@ const SongDetail = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Tab Content */}
                 <div className="lg:col-span-2">
                     {activeTab === 'lyrics' ? (
                         <div>
@@ -177,11 +223,17 @@ const SongDetail = () => {
                     )}
                 </div>
 
-                {/* Right Column: Info */}
-                {/* ... existing info code */}
-            </div>
-        </div>
-    );
+                <div className="space-y-6">
+                    <div className="bg-github-bg-secondary border border-github-border rounded-lg p-5">
+                        <h3 className="text-sm font-bold text-github-text-secondary uppercase tracking-wider mb-4">Track Info</h3>
+                        <ul className="space-y-4">
+                            <li className="flex items-center gap-3 text-github-text">
+                                <FileText className="w-4 h-4 text-github-accent-text" />
+                                <div>
+                                    <p className="text-xs text-github-text-secondary">Track Type</p>
+                                    <p className="text-sm font-medium">{song.sub_category || 'Throwaway Track (Complete)'}</p>
+                                </div>
+                            </li>
                             <li className="flex items-center gap-3 text-github-text">
                                 <Calendar className="w-4 h-4 text-github-accent-text" />
                                 <div>
