@@ -246,7 +246,7 @@ const AdminUpload = () => {
 
                 <div>
                     <label className="block text-sm font-medium text-github-text-secondary mb-1">Cover Image</label>
-                    {isSessionMode && formData.image_url && (
+                    {isAltMode && formData.image_url && (
                         <div className="mb-2">
                             <span className="text-xs text-github-text-secondary">Inherited from parent (optional to change)</span>
                         </div>

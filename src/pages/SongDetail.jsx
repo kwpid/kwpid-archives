@@ -205,16 +205,25 @@ const SongDetail = () => {
                                         <Link
                                             to={`/song/${file.id}`}
                                             key={file.id}
-                                            className="p-4 bg-github-bg-secondary border border-github-border rounded-lg hover:bg-github-border transition-colors group"
+                                            className="p-4 bg-github-bg-secondary border border-github-border rounded-lg hover:bg-github-border transition-colors group flex gap-4"
                                         >
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <span className="text-xs font-bold px-2 py-0.5 bg-purple-600 text-white rounded uppercase">
-                                                    {file.sub_category}
-                                                </span>
-                                                <span className="text-xs text-github-text-secondary">{formatDate(file.date_written)}</span>
+                                            <div className="w-16 h-16 bg-github-bg border border-github-border rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                                {file.image_url ? (
+                                                    <img src={file.image_url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Music className="w-6 h-6 text-github-text-secondary" />
+                                                )}
                                             </div>
-                                            <h3 className="font-bold text-github-text group-hover:text-github-accent-text">{file.title}</h3>
-                                            {file.description && <p className="text-xs text-github-text-secondary mt-1 truncate">{file.description}</p>}
+                                            <div className="flex-grow min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-purple-600 text-white rounded uppercase whitespace-nowrap">
+                                                        {file.sub_category}
+                                                    </span>
+                                                    <span className="text-[10px] text-github-text-secondary">{formatDate(file.date_written)}</span>
+                                                </div>
+                                                <h3 className="font-bold text-github-text group-hover:text-github-accent-text truncate text-sm">{file.title}</h3>
+                                                {file.description && <p className="text-[11px] text-github-text-secondary mt-0.5 truncate">{file.description}</p>}
+                                            </div>
                                         </Link>
                                     ))}
                                 </div>
