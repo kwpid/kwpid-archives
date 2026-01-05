@@ -90,6 +90,21 @@ const Archive = () => {
         setSortOrder('desc');
     }, []);
 
+    // Sorting logic
+    const handleSort = (field) => {
+        if (sortField === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortOrder('asc');
+        }
+    };
+
+    const getSortIcon = (field) => {
+        if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-50" />;
+        return sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
+    };
+
     // Create song to album map for cover art
     const songToAlbumMap = isFull ? createSongToAlbumMap(albumTracks) : {};
 
