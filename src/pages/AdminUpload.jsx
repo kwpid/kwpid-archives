@@ -17,7 +17,8 @@ const AdminUpload = () => {
     const [formData, setFormData] = useState({
         title: '',
         category: 'Full',
-        sub_category: 'Released',
+        sub_category: 'Throwaway Track (Complete)',
+        is_released: false,
         lyrics: '',
         date_written: '',
         version_number: '1.0',
@@ -177,15 +178,24 @@ const AdminUpload = () => {
                             />
                         ) : (
                             <select name="sub_category" value={formData.sub_category} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text">
+                                <option value="Throwaway Track (Complete)">Throwaway Track (Complete)</option>
+                                <option value="Throwaway Track (Demo / Incomplete)">Throwaway Track (Demo / Incomplete)</option>
                                 <option value="Released">Released</option>
-                                <option value="Unreleased">Unreleased</option>
-                                <option value="Demos">Demos</option>
-                                <option value="Throwaway (Completed)">Throwaway (Completed)</option>
-                                <option value="Throwaway (Demo)">Throwaway (Demo)</option>
-                                {/* Removed 'Sessions' from manual selection to enforce workflow */}
                             </select>
                         )}
                     </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        name="is_released"
+                        id="is_released"
+                        checked={formData.is_released}
+                        onChange={(e) => setFormData(prev => ({ ...prev, is_released: e.target.checked }))}
+                        className="w-4 h-4 rounded border-github-border bg-github-bg text-github-accent focus:ring-github-accent"
+                    />
+                    <label htmlFor="is_released" className="text-sm font-medium text-github-text">Mark as Released (Publicly available)</label>
                 </div>
 
                 <div>

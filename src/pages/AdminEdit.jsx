@@ -14,7 +14,8 @@ const AdminEdit = () => {
     const [formData, setFormData] = useState({
         title: '',
         category: 'Full',
-        sub_category: 'Released',
+        sub_category: 'Throwaway Track (Complete)',
+        is_released: false,
         lyrics: '',
         date_written: '',
         version_number: '',
@@ -43,7 +44,8 @@ const AdminEdit = () => {
                 setFormData({
                     title: data.title || '',
                     category: data.category || 'Full',
-                    sub_category: data.sub_category || 'Released',
+                    sub_category: data.sub_category || 'Throwaway Track (Complete)',
+                    is_released: data.is_released || false,
                     lyrics: data.lyrics || '',
                     date_written: data.date_written || '',
                     version_number: data.version_number || '',
@@ -169,14 +171,23 @@ const AdminEdit = () => {
                     <div>
                         <label className="block text-sm font-medium text-github-text-secondary mb-1">Sub Category</label>
                         <select name="sub_category" value={formData.sub_category} onChange={handleChange} className="w-full bg-github-bg border border-github-border rounded px-3 py-2 text-github-text">
+                            <option value="Throwaway Track (Complete)">Throwaway Track (Complete)</option>
+                            <option value="Throwaway Track (Demo / Incomplete)">Throwaway Track (Demo / Incomplete)</option>
                             <option value="Released">Released</option>
-                            <option value="Unreleased">Unreleased</option>
-                            <option value="Demos">Demos</option>
-                            <option value="Sessions">Sessions</option>
-                            <option value="Throwaway (Completed)">Throwaway (Completed)</option>
-                            <option value="Throwaway (Demo)">Throwaway (Demo)</option>
                         </select>
                     </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        name="is_released"
+                        id="is_released"
+                        checked={formData.is_released}
+                        onChange={(e) => setFormData(prev => ({ ...prev, is_released: e.target.checked }))}
+                        className="w-4 h-4 rounded border-github-border bg-github-bg text-github-accent focus:ring-github-accent"
+                    />
+                    <label htmlFor="is_released" className="text-sm font-medium text-github-text">Mark as Released (Publicly available)</label>
                 </div>
 
                 <div>

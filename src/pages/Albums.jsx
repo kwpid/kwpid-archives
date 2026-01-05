@@ -594,9 +594,20 @@ const AlbumModal = ({ title, formData, setFormData, imageFile, setImageFile, onS
         });
     };
 
+    const moveTrack = (index, direction) => {
+        const newSongs = [...(formData.selectedSongs || [])];
+        const newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < newSongs.length) {
+            const temp = newSongs[index];
+            newSongs[index] = newSongs[newIndex];
+            newSongs[newIndex] = temp;
+            setFormData(prev => ({ ...prev, selectedSongs: newSongs }));
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-github-bg-secondary border border-github-border rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-github-bg-secondary border border-github-border rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-github-text">{title}</h2>
                     <button onClick={onClose} className="text-github-text-secondary hover:text-github-text">
@@ -605,8 +616,9 @@ const AlbumModal = ({ title, formData, setFormData, imageFile, setImageFile, onS
                 </div>
 
                 <form onSubmit={onSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-4">
+                            {/* ... (existing inputs) */}
                             <div>
                                 <label className="block text-sm font-medium text-github-text-secondary mb-1">Album Name</label>
                                 <input
@@ -695,32 +707,60 @@ const AlbumModal = ({ title, formData, setFormData, imageFile, setImageFile, onS
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-github-text-secondary">Select Tracks</label>
-                            <div className="bg-github-bg border border-github-border rounded p-3 h-[300px] overflow-y-auto space-y-1">
-                                {songs.map(song => {
-                                    const isSelected = (formData.selectedSongs || []).includes(song.id);
-                                    return (
-                                        <div
-                                            key={song.id}
-                                            onClick={() => toggleSong(song.id)}
-                                            className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-github-border/30 transition-colors ${
-                                                isSelected ? 'bg-github-accent/20 border border-github-accent/30' : 'border border-transparent'
-                                            }`}
-                                        >
-                                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                                                isSelected ? 'bg-github-accent border-github-accent' : 'border-github-border'
-                                            }`}>
-                                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-github-text-secondary mb-2">Tracklist Order</label>
+                                <div className="bg-github-bg border border-github-border rounded p-2 h-[200px] overflow-y-auto space-y-1">
+                                    {(formData.selectedSongs || []).map((songId, index) => {
+                                        const song = songs.find(s => s.id === songId);
+                                        return (
+                                            <div key={songId} className="flex items-center gap-2 p-2 bg-github-bg-secondary border border-github-border rounded text-xs">
+                                                <span className="w-4 font-mono text-github-text-secondary">{index + 1}</span>
+                                                <span className="flex-1 text-github-text truncate">{song?.title || 'Unknown Song'}</span>
+                                                <div className="flex gap-1">
+                                                    <button type="button" onClick={() => moveTrack(index, -1)} disabled={index === 0} className="p-1 hover:bg-github-border rounded disabled:opacity-30">
+                                                        <ArrowUp className="w-3 h-3" />
+                                                    </button>
+                                                    <button type="button" onClick={() => moveTrack(index, 1)} disabled={index === (formData.selectedSongs?.length || 0) - 1} className="p-1 hover:bg-github-border rounded disabled:opacity-30">
+                                                        <ArrowDown className="w-3 h-3" />
+                                                    </button>
+                                                    <button type="button" onClick={() => toggleSong(songId)} className="p-1 hover:bg-red-900/30 text-red-500 rounded">
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <span className="text-sm text-github-text truncate">{song.title}</span>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                    {(formData.selectedSongs || []).length === 0 && (
+                                        <p className="text-center py-4 text-github-text-secondary text-xs italic">No tracks selected</p>
+                                    )}
+                                </div>
                             </div>
-                            <p className="text-[10px] text-github-text-secondary">
-                                {(formData.selectedSongs || []).length} tracks selected
-                            </p>
+
+                            <div>
+                                <label className="block text-sm font-medium text-github-text-secondary mb-2">Archive Songs</label>
+                                <div className="bg-github-bg border border-github-border rounded p-2 h-[200px] overflow-y-auto space-y-1">
+                                    {songs.map(song => {
+                                        const isSelected = (formData.selectedSongs || []).includes(song.id);
+                                        return (
+                                            <div
+                                                key={song.id}
+                                                onClick={() => toggleSong(song.id)}
+                                                className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-github-border/30 transition-colors ${
+                                                    isSelected ? 'bg-github-accent/10 border-github-accent/30' : 'border-transparent'
+                                                } border text-xs`}
+                                            >
+                                                <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${
+                                                    isSelected ? 'bg-github-accent border-github-accent' : 'border-github-border'
+                                                }`}>
+                                                    {isSelected && <Check className="w-2 h-2 text-white" />}
+                                                </div>
+                                                <span className="text-github-text truncate">{song.title}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
