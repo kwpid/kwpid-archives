@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getSongEra } from '../lib/eraUtils';
 import { getSongDisplayImage, createSongToAlbumMap } from '../lib/songImageUtils';
-import { Music, Calendar, Clock, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
+import { Music, Calendar, Clock, ArrowUpDown, ArrowUp, ArrowDown, Search, Folder, ChevronRight, ChevronDown, FileText } from 'lucide-react';
 
 const formatDate = (dateString) => {
     if (!dateString) return 'Unknown Date';
@@ -20,31 +20,24 @@ const Archive = () => {
     const [albums, setAlbums] = useState([]);
     const [albumTracks, setAlbumTracks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [expandedFolders, setExpandedFolders] = useState({});
 
     // Filters & Search
-    const [filter, setFilter] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
-    const [eraFilter, setEraFilter] = useState('All');
-
-    // Sorting state
-    const [sortField, setSortField] = useState('date_written');
-    const [sortOrder, setSortOrder] = useState('desc');
+    
     const isFull = true;
     const dbCategory = 'Full';
     const displayTitle = 'Full Songs';
-    const subCategories = ['Throwaway Track (Complete)', 'Throwaway Track (Demo / Incomplete)', 'Released'];
-    const [releaseStatus, setReleaseStatus] = useState('All');
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
 
-            // Fetch songs
+            // Fetch songs including sessions
             let query = supabase
                 .from('songs')
                 .select('*')
-                .eq('category', dbCategory)
-                .neq('sub_category', 'Sessions'); // Exclude sessions from archive
+                .eq('category', dbCategory);
 
             const { data: songsData, error: songsError } = await query;
 
@@ -55,255 +48,181 @@ const Archive = () => {
             }
 
             // Fetch albums (for era calculation and cover art)
-            if (isFull) {
-                const { data: albumsData, error: albumsError } = await supabase
-                    .from('albums')
-                    .select('*');
+            const { data: albumsData, error: albumsError } = await supabase
+                .from('albums')
+                .select('*');
 
-                if (albumsError) {
-                    console.error('Error fetching albums:', albumsError);
-                } else {
-                    setAlbums(albumsData || []);
-                }
+            if (albumsError) {
+                console.error('Error fetching albums:', albumsError);
+            } else {
+                setAlbums(albumsData || []);
+            }
 
-                // Fetch album tracks to map songs to albums
-                const { data: tracksData, error: tracksError } = await supabase
-                    .from('album_tracks')
-                    .select('song_id, albums(id, cover_image_url)');
+            // Fetch album tracks to map songs to albums
+            const { data: tracksData, error: tracksError } = await supabase
+                .from('album_tracks')
+                .select('song_id, albums(id, cover_image_url)');
 
-                if (tracksError) {
-                    console.error('Error fetching album tracks:', tracksError);
-                } else {
-                    setAlbumTracks(tracksData || []);
-                }
+            if (tracksError) {
+                console.error('Error fetching album tracks:', tracksError);
+            } else {
+                setAlbumTracks(tracksData || []);
             }
 
             setLoading(false);
         };
 
         fetchData();
-        setFilter('All');
-        setReleaseStatus('All');
-        setSearchQuery('');
-        setEraFilter('All');
-        setSortField('date_written');
-        setSortOrder('desc');
     }, []);
 
-    // Sorting logic
-    const handleSort = (field) => {
-        if (sortField === field) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortField(field);
-            setSortOrder('asc');
-        }
-    };
-
-    const getSortIcon = (field) => {
-        if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-50" />;
-        return sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
+    const toggleFolder = (folderId) => {
+        setExpandedFolders(prev => ({
+            ...prev,
+            [folderId]: !prev[folderId]
+        }));
     };
 
     // Create song to album map for cover art
-    const songToAlbumMap = isFull ? createSongToAlbumMap(albumTracks) : {};
+    const songToAlbumMap = createSongToAlbumMap(albumTracks);
 
-    // Get all unique eras for the dropdown (Full songs only)
-    const availableEras = isFull ? [...new Set(songs.map(song => {
-        const era = getSongEra(song, albums);
-        return era;
-    }).filter(Boolean))].sort() : [];
+    // Grouping logic
+    const groupedSongs = songs.reduce((acc, song) => {
+        if (searchQuery && !song.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+            return acc;
+        }
 
-    // Filter & Sort Logic
-    const filteredAndSortedSongs = songs
-        .map(song => ({
+        const era = getSongEra(song, albums) || 'Unknown Era';
+        
+        let subFolder = 'Unreleased';
+        if (song.sub_category === 'Sessions') {
+            subFolder = 'Sessions';
+        } else if (song.is_released) {
+            subFolder = 'Released';
+        }
+
+        if (!acc[era]) acc[era] = { Released: [], Unreleased: [], Sessions: [] };
+        acc[era][subFolder].push({
             ...song,
-            era: isFull ? getSongEra(song, albums) : null,
             displayImage: getSongDisplayImage(song, songToAlbumMap)
-        }))
-        .filter(song => {
-            const matchesCategory = filter === 'All' || song.sub_category === filter;
-            const matchesReleaseStatus = releaseStatus === 'All' || 
-                (releaseStatus === 'Released' ? song.is_released : !song.is_released);
-            const matchesSearch = song.title.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesEra = !isFull || eraFilter === 'All' || song.era === eraFilter;
-            return matchesCategory && matchesReleaseStatus && matchesSearch && matchesEra;
-        })
-        .sort((a, b) => {
-            if (sortField === 'era' && isFull) {
-                const eraA = a.era || 'ZZZ';
-                const eraB = b.era || 'ZZZ';
-                if (eraA < eraB) return sortOrder === 'asc' ? -1 : 1;
-                if (eraA > eraB) return sortOrder === 'asc' ? 1 : -1;
-                // If eras are the same, sort by date
-                const dateA = new Date(a.date_written || a.created_at);
-                const dateB = new Date(b.date_written || b.created_at);
-                return dateA - dateB;
-            }
-
-            let valA = a[sortField];
-            let valB = b[sortField];
-
-            if (sortField === 'date_written') {
-                valA = valA || a.created_at;
-                valB = valB || b.created_at;
-            }
-
-            if (!valA) return 1;
-            if (!valB) return -1;
-
-            if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-            if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-            return 0;
         });
+        return acc;
+    }, {});
 
+    // Sort eras
+    const sortedEras = Object.keys(groupedSongs).sort();
 
     return (
-        <div>
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-github-text capitalize flex items-center gap-2">
+                    <h1 className="text-3xl font-bold text-github-text flex items-center gap-3">
+                        <Folder className="w-8 h-8 text-github-accent" />
                         {displayTitle}
-                        <span className="text-sm font-normal text-github-text-secondary bg-github-border px-2 py-0.5 rounded-full">
-                            {loading ? '...' : filteredAndSortedSongs.length}
+                        <span className="text-sm font-normal text-github-text-secondary bg-github-border/50 px-3 py-1 rounded-full">
+                            {loading ? '...' : songs.length} files
                         </span>
                     </h1>
-                    <p className="text-github-text-secondary text-sm mt-1">
-                        {isFull ? 'File Archive' : 'Lyrics and Melodies'}
+                    <p className="text-github-text-secondary mt-2">
+                        Digital Archive & Master Recordings
                     </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                    {/* Search Bar and Era Filter */}
-                    <div className="flex gap-2 flex-1 sm:flex-initial">
-                        <div className="relative flex-1 sm:flex-initial">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-github-text-secondary" />
-                            <input
-                                type="text"
-                                placeholder="Search songs..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 pr-4 py-1.5 bg-github-bg-secondary border border-github-border rounded-full text-sm text-github-text focus:outline-none focus:border-github-accent w-full sm:w-64"
-                            />
-                        </div>
-
-                        {/* Era Filter Dropdown (Full songs only) */}
-                        {isFull && availableEras.length > 0 && (
-                            <select
-                                value={eraFilter}
-                                onChange={(e) => setEraFilter(e.target.value)}
-                                className="px-4 py-1.5 bg-github-bg-secondary border border-github-border rounded-full text-sm text-github-text focus:outline-none focus:border-github-accent"
-                            >
-                                <option value="All">All Eras</option>
-                                {availableEras.map(era => (
-                                    <option key={era} value={era}>{era}</option>
-                                ))}
-                            </select>
-                        )}
-                    </div>
-
-                    {/* Release Status Filter */}
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setReleaseStatus('All')}
-                            className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${releaseStatus === 'All' ? 'bg-github-accent text-white' : 'bg-github-border text-github-text-secondary hover:text-github-text'}`}
-                        >
-                            All Public
-                        </button>
-                        <button
-                            onClick={() => setReleaseStatus('Released')}
-                            className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${releaseStatus === 'Released' ? 'bg-green-600 text-white' : 'bg-github-border text-github-text-secondary hover:text-github-text'}`}
-                        >
-                            Released
-                        </button>
-                        <button
-                            onClick={() => setReleaseStatus('Unreleased')}
-                            className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${releaseStatus === 'Unreleased' ? 'bg-yellow-600 text-white' : 'bg-github-border text-github-text-secondary hover:text-github-text'}`}
-                        >
-                            Unreleased
-                        </button>
-                    </div>
+                <div className="relative w-full md:w-80">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-github-text-secondary" />
+                    <input
+                        type="text"
+                        placeholder="Search archive..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-github-bg-secondary border border-github-border rounded-lg text-sm text-github-text focus:outline-none focus:ring-2 focus:ring-github-accent/50 focus:border-github-accent transition-all"
+                    />
                 </div>
             </div>
 
-            <div className="bg-github-bg-secondary border border-github-border rounded-lg overflow-hidden">
-                {/* Table Header */}
-                <div className="grid grid-cols-12 gap-4 p-4 border-b border-github-border bg-github-bg text-xs font-bold text-github-text-secondary uppercase tracking-wider">
-                    <div className="col-span-1 text-center">Icon</div>
-                    <div className={`${isFull ? 'col-span-5 md:col-span-3' : 'col-span-4 md:col-span-4'} cursor-pointer select-none flex items-center gap-1 hover:text-github-text`} onClick={() => handleSort('title')}>
-                        Name {getSortIcon('title')}
-                    </div>
-                    <div className={`${isFull ? 'col-span-3 md:col-span-2' : 'col-span-3 md:col-span-2'} cursor-pointer select-none flex items-center gap-1 hover:text-github-text`} onClick={() => handleSort('date_written')}>
-                        Date {getSortIcon('date_written')}
-                    </div>
-                    {isFull && (
-                        <div className="col-span-0 md:col-span-2 hidden md:block cursor-pointer select-none flex items-center gap-1 hover:text-github-text" onClick={() => handleSort('era')}>
-                            Era {getSortIcon('era')}
-                        </div>
-                    )}
-                    <div className="col-span-0 md:col-span-2 hidden md:block">Status</div>
-                    <div className={`${isFull ? 'col-span-3 md:col-span-2' : 'col-span-4 md:col-span-3'} text-right`}>Details</div>
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 text-github-text-secondary">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-github-accent mb-4"></div>
+                    <p>Accessing archive database...</p>
                 </div>
-
-                {/* Table Body */}
-                {loading ? (
-                    <div className="p-8 text-center text-github-text-secondary">Loading archive...</div>
-                ) : filteredAndSortedSongs.length === 0 ? (
-                    <div className="p-8 text-center text-github-text-secondary italic">No files found matching your search.</div>
-                ) : (
-                    <div className="divide-y divide-github-border">
-                        {filteredAndSortedSongs.map(song => (
-                            <Link
-                                to={`/song/${song.id}`}
-                                key={song.id}
-                                className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-github-border/30 transition-colors text-sm group"
+            ) : sortedEras.length === 0 ? (
+                <div className="text-center py-20 bg-github-bg-secondary border border-github-border border-dashed rounded-xl">
+                    <Search className="w-12 h-12 text-github-text-secondary mx-auto mb-4 opacity-20" />
+                    <p className="text-github-text-secondary">No files found matching your search.</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {sortedEras.map(era => (
+                        <div key={era} className="border border-github-border rounded-xl bg-github-bg-secondary/30 overflow-hidden">
+                            <button
+                                onClick={() => toggleFolder(era)}
+                                className="w-full flex items-center gap-3 p-4 hover:bg-github-border/20 transition-colors text-left"
                             >
-                                {/* Icon/Image */}
-                                <div className="col-span-1 flex justify-center">
-                                    <div className="w-8 h-8 rounded bg-github-bg border border-github-border flex items-center justify-center overflow-hidden">
-                                        {song.displayImage ? (
-                                            <img src={song.displayImage} alt="" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <Music className="w-4 h-4 text-github-text-secondary" />
-                                        )}
-                                    </div>
-                                </div>
+                                {expandedFolders[era] ? <ChevronDown className="w-5 h-5 text-github-text-secondary" /> : <ChevronRight className="w-5 h-5 text-github-text-secondary" />}
+                                <Folder className={`w-6 h-6 ${expandedFolders[era] ? 'text-github-accent' : 'text-github-text-secondary'}`} />
+                                <span className="font-bold text-github-text">{era}</span>
+                                <span className="ml-auto text-xs text-github-text-secondary bg-github-border/30 px-2 py-0.5 rounded-full">
+                                    {Object.values(groupedSongs[era]).flat().length} items
+                                </span>
+                            </button>
 
-                                {/* Name */}
-                                <div className={`${isFull ? 'col-span-5 md:col-span-3' : 'col-span-4 md:col-span-4'} font-medium text-github-text truncate group-hover:text-github-accent-text group-hover:underline`}>
-                                    {song.title}
-                                </div>
+                            {expandedFolders[era] && (
+                                <div className="pl-8 pr-4 pb-4 space-y-2 border-t border-github-border/50 bg-github-bg/50">
+                                    {['Released', 'Unreleased', 'Sessions'].map(sub => {
+                                        const subFiles = groupedSongs[era][sub];
+                                        if (subFiles.length === 0 && !searchQuery) return null;
 
-                                {/* Date */}
-                                <div className={`${isFull ? 'col-span-3 md:col-span-2' : 'col-span-3 md:col-span-2'} text-github-text-secondary font-mono text-xs`}>
-                                    {formatDate(song.date_written || song.created_at)}
-                                </div>
+                                        const subId = `${era}-${sub}`;
+                                        return (
+                                            <div key={sub} className="mt-2">
+                                                <button
+                                                    onClick={() => toggleFolder(subId)}
+                                                    className="w-full flex items-center gap-2 py-2 px-3 hover:bg-github-border/20 rounded-lg transition-colors text-left group"
+                                                >
+                                                    {expandedFolders[subId] ? <ChevronDown className="w-4 h-4 text-github-text-secondary" /> : <ChevronRight className="w-4 h-4 text-github-text-secondary" />}
+                                                    <Folder className="w-5 h-5 text-yellow-500/70 group-hover:text-yellow-500" />
+                                                    <span className="text-sm font-medium text-github-text">{sub}</span>
+                                                    <span className="text-[10px] text-github-text-secondary ml-2 opacity-50">
+                                                        ({subFiles.length})
+                                                    </span>
+                                                </button>
 
-                                {/* Era (Full songs only, hidden on mobile) */}
-                                {isFull && (
-                                    <div className="col-span-0 md:col-span-2 hidden md:block text-github-text-secondary text-xs">
-                                        {song.era || '-'}
-                                    </div>
-                                )}
-
-                                {/* Status/Category (Hidden on mobile) */}
-                                <div className="col-span-0 md:col-span-2 hidden md:block">
-                                    {song.sub_category && (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-github-border text-github-text">
-                                            {song.sub_category}
-                                        </span>
-                                    )}
+                                                {expandedFolders[subId] && (
+                                                    <div className="pl-10 mt-1 space-y-1">
+                                                        {subFiles.sort((a, b) => new Date(b.date_written || b.created_at) - new Date(a.date_written || a.created_at)).map(song => (
+                                                            <Link
+                                                                key={song.id}
+                                                                to={`/song/${song.id}`}
+                                                                className="flex items-center gap-3 p-2 hover:bg-github-accent/10 rounded-lg group transition-all border border-transparent hover:border-github-accent/20"
+                                                            >
+                                                                <div className="w-8 h-8 rounded bg-github-bg border border-github-border flex-shrink-0 flex items-center justify-center overflow-hidden group-hover:border-github-accent/50">
+                                                                    {song.displayImage ? (
+                                                                        <img src={song.displayImage} alt="" className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <Music className="w-4 h-4 text-github-text-secondary group-hover:text-github-accent" />
+                                                                    )}
+                                                                </div>
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="text-sm font-medium text-github-text group-hover:text-github-accent transition-colors truncate">
+                                                                        {song.title}
+                                                                    </div>
+                                                                    <div className="text-[10px] text-github-text-secondary font-mono">
+                                                                        {formatDate(song.date_written || song.created_at)}
+                                                                    </div>
+                                                                </div>
+                                                                <FileText className="w-4 h-4 text-github-text-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            </Link>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-
-                                {/* Link Icon */}
-                                <div className={`${isFull ? 'col-span-3 md:col-span-2' : 'col-span-4 md:col-span-3'} text-right`}>
-                                    <span className="text-github-accent-text text-xs hover:underline hidden sm:inline">View</span>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-                )}
-            </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
