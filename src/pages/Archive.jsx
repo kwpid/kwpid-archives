@@ -15,6 +15,30 @@ const formatDate = (dateString) => {
     });
 };
 
+const SongLink = ({ song }) => (
+    <Link
+        to={`/song/${song.id}`}
+        className="flex items-center gap-3 p-2 hover:bg-github-accent/10 rounded-lg group transition-all border border-transparent hover:border-github-accent/20"
+    >
+        <div className="w-8 h-8 rounded bg-github-bg border border-github-border flex-shrink-0 flex items-center justify-center overflow-hidden group-hover:border-github-accent/50">
+            {song.displayImage ? (
+                <img src={song.displayImage} alt="" className="w-full h-full object-cover" />
+            ) : (
+                <Music className="w-4 h-4 text-github-text-secondary group-hover:text-github-accent" />
+            )}
+        </div>
+        <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium text-github-text group-hover:text-github-accent transition-colors truncate">
+                {song.title}
+            </div>
+            <div className="text-[10px] text-github-text-secondary font-mono">
+                {formatDate(song.date_written || song.created_at)}
+            </div>
+        </div>
+        <FileText className="w-4 h-4 text-github-text-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
+    </Link>
+);
+
 const Archive = () => {
     const [songs, setSongs] = useState([]);
     const [albums, setAlbums] = useState([]);
@@ -100,11 +124,21 @@ const Archive = () => {
             subFolder = 'Released';
         }
 
-        if (!acc[era]) acc[era] = { Released: [], Unreleased: [], Sessions: [] };
-        acc[era][subFolder].push({
-            ...song,
-            displayImage: getSongDisplayImage(song, songToAlbumMap)
-        });
+        if (!acc[era]) acc[era] = { Released: [], Unreleased: [], Sessions: {} };
+        
+        if (subFolder === 'Sessions') {
+            const songTitle = song.title || 'Unknown Song';
+            if (!acc[era].Sessions[songTitle]) acc[era].Sessions[songTitle] = [];
+            acc[era].Sessions[songTitle].push({
+                ...song,
+                displayImage: getSongDisplayImage(song, songToAlbumMap)
+            });
+        } else {
+            acc[era][subFolder].push({
+                ...song,
+                displayImage: getSongDisplayImage(song, songToAlbumMap)
+            });
+        }
         return acc;
     }, {});
 
@@ -114,12 +148,25 @@ const Archive = () => {
             const newExpanded = {};
             Object.keys(groupedSongs).forEach(era => {
                 let eraHasMatch = false;
-                ['Released', 'Unreleased', 'Sessions'].forEach(sub => {
+                
+                // Released & Unreleased
+                ['Released', 'Unreleased'].forEach(sub => {
                     if (groupedSongs[era][sub].length > 0) {
                         newExpanded[`${era}-${sub}`] = true;
                         eraHasMatch = true;
                     }
                 });
+
+                // Sessions
+                const sessionSongs = Object.keys(groupedSongs[era].Sessions);
+                if (sessionSongs.length > 0) {
+                    newExpanded[`${era}-Sessions`] = true;
+                    eraHasMatch = true;
+                    sessionSongs.forEach(songTitle => {
+                        newExpanded[`${era}-Sessions-${songTitle}`] = true;
+                    });
+                }
+
                 if (eraHasMatch) {
                     newExpanded[era] = true;
                 }
@@ -188,10 +235,19 @@ const Archive = () => {
                             {expandedFolders[era] && (
                                 <div className="pl-8 pr-4 pb-4 space-y-2 border-t border-github-border/50 bg-github-bg/50">
                                     {['Released', 'Unreleased', 'Sessions'].map(sub => {
-                                        const subFiles = groupedSongs[era][sub];
-                                        if (subFiles.length === 0 && !searchQuery) return null;
+                                        const subData = groupedSongs[era][sub];
+                                        const hasItems = sub === 'Sessions' 
+                                            ? Object.keys(subData).length > 0 
+                                            : subData.length > 0;
+
+                                        if (!hasItems && !searchQuery) return null;
+                                        if (!hasItems && searchQuery) return null;
 
                                         const subId = `${era}-${sub}`;
+                                        const itemCount = sub === 'Sessions'
+                                            ? Object.values(subData).flat().length
+                                            : subData.length;
+
                                         return (
                                             <div key={sub} className="mt-2">
                                                 <button
@@ -202,36 +258,44 @@ const Archive = () => {
                                                     <Folder className="w-5 h-5 text-yellow-500/70 group-hover:text-yellow-500" />
                                                     <span className="text-sm font-medium text-github-text">{sub}</span>
                                                     <span className="text-[10px] text-github-text-secondary ml-2 opacity-50">
-                                                        ({subFiles.length})
+                                                        ({itemCount})
                                                     </span>
                                                 </button>
 
                                                 {expandedFolders[subId] && (
-                                                    <div className="pl-10 mt-1 space-y-1">
-                                                        {subFiles.sort((a, b) => new Date(b.date_written || b.created_at) - new Date(a.date_written || a.created_at)).map(song => (
-                                                            <Link
-                                                                key={song.id}
-                                                                to={`/song/${song.id}`}
-                                                                className="flex items-center gap-3 p-2 hover:bg-github-accent/10 rounded-lg group transition-all border border-transparent hover:border-github-accent/20"
-                                                            >
-                                                                <div className="w-8 h-8 rounded bg-github-bg border border-github-border flex-shrink-0 flex items-center justify-center overflow-hidden group-hover:border-github-accent/50">
-                                                                    {song.displayImage ? (
-                                                                        <img src={song.displayImage} alt="" className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        <Music className="w-4 h-4 text-github-text-secondary group-hover:text-github-accent" />
-                                                                    )}
-                                                                </div>
-                                                                <div className="min-w-0 flex-1">
-                                                                    <div className="text-sm font-medium text-github-text group-hover:text-github-accent transition-colors truncate">
-                                                                        {song.title}
+                                                    <div className="pl-6 mt-1 space-y-1">
+                                                        {sub === 'Sessions' ? (
+                                                            Object.keys(subData).sort().map(songTitle => {
+                                                                const songId = `${era}-Sessions-${songTitle}`;
+                                                                const files = subData[songTitle];
+                                                                return (
+                                                                    <div key={songTitle} className="mt-1">
+                                                                        <button
+                                                                            onClick={() => toggleFolder(songId)}
+                                                                            className="w-full flex items-center gap-2 py-1.5 px-3 hover:bg-github-border/20 rounded-lg transition-colors text-left group"
+                                                                        >
+                                                                            {expandedFolders[songId] ? <ChevronDown className="w-3.5 h-3.5 text-github-text-secondary" /> : <ChevronRight className="w-3.5 h-3.5 text-github-text-secondary" />}
+                                                                            <Folder className="w-4 h-4 text-github-accent/60 group-hover:text-github-accent" />
+                                                                            <span className="text-xs font-medium text-github-text">{songTitle}</span>
+                                                                            <span className="text-[9px] text-github-text-secondary ml-1.5 opacity-40">
+                                                                                ({files.length})
+                                                                            </span>
+                                                                        </button>
+                                                                        {expandedFolders[songId] && (
+                                                                            <div className="pl-6 mt-1 space-y-1">
+                                                                                {files.sort((a, b) => new Date(b.date_written || b.created_at) - new Date(a.date_written || a.created_at)).map(song => (
+                                                                                    <SongLink key={song.id} song={song} />
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                    <div className="text-[10px] text-github-text-secondary font-mono">
-                                                                        {formatDate(song.date_written || song.created_at)}
-                                                                    </div>
-                                                                </div>
-                                                                <FileText className="w-4 h-4 text-github-text-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                            </Link>
-                                                        ))}
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            subData.sort((a, b) => new Date(b.date_written || b.created_at) - new Date(a.date_written || a.created_at)).map(song => (
+                                                                <SongLink key={song.id} song={song} />
+                                                            ))
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
