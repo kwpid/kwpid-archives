@@ -32,7 +32,7 @@ const MainLayout = () => {
                         {/* Desktop Nav */}
                         <div className="hidden md:flex items-center space-x-4">
                             <NavLink to="/" active={isActive('/')}>Dashboard</NavLink>
-                            <NavLink to="/archive/full" active={isActive('/archive/full')}>Full Songs</NavLink>
+                            <NavLink to="/archive/full" active={isActive('/archive/full')}>Files</NavLink>
                             <NavLink to="/albums" active={isActive('/albums')}>
                                 <Disc className="w-4 h-4 inline-block mr-1" /> Albums
                             </NavLink>
@@ -80,7 +80,7 @@ const MainLayout = () => {
                     <div className="md:hidden bg-github-bg-secondary border-b border-github-border">
                         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                             <MobileNavLink to="/" onClick={toggleMenu}>Dashboard</MobileNavLink>
-                            <MobileNavLink to="/archive/full" onClick={toggleMenu}>Full Songs</MobileNavLink>
+                            <MobileNavLink to="/archive/full" onClick={toggleMenu}>Files</MobileNavLink>
                             <MobileNavLink to="/albums" onClick={toggleMenu}>Albums</MobileNavLink>
                             <MobileNavLink to="/settings" onClick={toggleMenu}>Settings</MobileNavLink>
 

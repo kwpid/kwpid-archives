@@ -27,7 +27,7 @@ const Archive = () => {
     
     const isFull = true;
     const dbCategory = 'Full';
-    const displayTitle = 'Full Songs';
+    const displayTitle = 'Files';
 
     useEffect(() => {
         const fetchData = async () => {
@@ -107,6 +107,26 @@ const Archive = () => {
         });
         return acc;
     }, {});
+
+    // Auto-expand folders on search
+    useEffect(() => {
+        if (searchQuery.trim()) {
+            const newExpanded = {};
+            Object.keys(groupedSongs).forEach(era => {
+                let eraHasMatch = false;
+                ['Released', 'Unreleased', 'Sessions'].forEach(sub => {
+                    if (groupedSongs[era][sub].length > 0) {
+                        newExpanded[`${era}-${sub}`] = true;
+                        eraHasMatch = true;
+                    }
+                });
+                if (eraHasMatch) {
+                    newExpanded[era] = true;
+                }
+            });
+            setExpandedFolders(newExpanded);
+        }
+    }, [searchQuery, songs]);
 
     // Sort eras
     const sortedEras = Object.keys(groupedSongs).sort();
