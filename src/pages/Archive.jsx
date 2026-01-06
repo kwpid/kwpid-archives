@@ -159,9 +159,10 @@ const Archive = () => {
             const era = getSongEra(song, albums) || 'Unknown Era';
             let subFolder = 'Unreleased';
             if (song.sub_category === 'Sessions') subFolder = 'Sessions';
+            else if (song.sub_category === 'Snippet') subFolder = 'Snippets';
             else if (song.is_released) subFolder = 'Released';
 
-            if (!acc[era]) acc[era] = { Released: [], Unreleased: [], Sessions: {} };
+            if (!acc[era]) acc[era] = { Released: [], Unreleased: [], Sessions: {}, Snippets: [] };
             if (subFolder === 'Sessions') {
                 const baseTitle = song.title.split(' (')[0].trim();
                 if (!acc[era].Sessions[baseTitle]) acc[era].Sessions[baseTitle] = [];
@@ -234,9 +235,9 @@ const Archive = () => {
         if (currentPath.length === 1) {
             return (
                 <div className={layout === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" : "space-y-4"}>
-                    {['Released', 'Unreleased', 'Sessions'].map(s => {
+                    {['Released', 'Unreleased', 'Snippets', 'Sessions'].map(s => {
                         const subData = eraData[s];
-                        const count = s === 'Sessions' ? Object.values(subData).flat().length : subData.length;
+                        const count = s === 'Sessions' ? Object.values(subData).flat().length : (subData?.length || 0);
                         if (count === 0 && !searchQuery) return null;
                         return (
                             <FolderItem 

@@ -225,6 +225,7 @@ const AdminUpload = () => {
                                 <option value="Throwaway Track (Complete)">Throwaway Track (Complete)</option>
                                 <option value="Throwaway Track (Demo / Incomplete)">Throwaway Track (Demo / Incomplete)</option>
                                 <option value="Released">Released</option>
+                                <option value="Snippet">Snippet</option>
                             </select>
                         )}
                     </div>

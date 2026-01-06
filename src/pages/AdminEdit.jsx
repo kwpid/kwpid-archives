@@ -204,6 +204,7 @@ const AdminEdit = () => {
                             <option value="Throwaway Track (Complete)">Throwaway Track (Complete)</option>
                             <option value="Throwaway Track (Demo / Incomplete)">Throwaway Track (Demo / Incomplete)</option>
                             <option value="Released">Released</option>
+                            <option value="Snippet">Snippet</option>
                             <option value="Session File">Session File</option>
                             <option value="Alt. Mix">Alt. Mix</option>
                             <option value="Alt. Beat">Alt. Beat</option>
