@@ -127,9 +127,10 @@ const Archive = () => {
         if (!acc[era]) acc[era] = { Released: [], Unreleased: [], Sessions: {} };
         
         if (subFolder === 'Sessions') {
-            const songTitle = song.title || 'Unknown Song';
-            if (!acc[era].Sessions[songTitle]) acc[era].Sessions[songTitle] = [];
-            acc[era].Sessions[songTitle].push({
+            // Extract base song title (e.g., "Maze (Session)" -> "Maze")
+            const baseTitle = song.title.split(' (')[0].trim();
+            if (!acc[era].Sessions[baseTitle]) acc[era].Sessions[baseTitle] = [];
+            acc[era].Sessions[baseTitle].push({
                 ...song,
                 displayImage: getSongDisplayImage(song, songToAlbumMap)
             });
