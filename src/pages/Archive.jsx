@@ -119,7 +119,13 @@ const Archive = () => {
     const [albumTracks, setAlbumTracks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedFolders, setExpandedFolders] = useState({});
-    const [layout, setLayout] = useState('list');
+    const [layout, setLayout] = useState(() => {
+        return localStorage.getItem('archive_layout') || 'list';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('archive_layout', layout);
+    }, [layout]);
     const [currentPath, setCurrentPath] = useState([]);
 
     const [searchQuery, setSearchQuery] = useState('');
