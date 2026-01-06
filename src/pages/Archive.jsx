@@ -179,6 +179,28 @@ const Archive = () => {
     // Sort eras
     const sortedEras = Object.keys(groupedSongs).sort();
 
+    // Calculate Era Date Ranges
+    const eraDates = sortedEras.reduce((acc, era) => {
+        const eraSongs = Object.values(groupedSongs[era]).flatMap(val => 
+            Array.isArray(val) ? val : Object.values(val).flat()
+        );
+        
+        if (eraSongs.length > 0) {
+            const dates = eraSongs
+                .map(s => new Date(s.date_written || s.created_at))
+                .filter(d => !isNaN(d.getTime()))
+                .sort((a, b) => a - b);
+            
+            if (dates.length > 0) {
+                acc[era] = {
+                    start: formatDate(dates[0].toISOString().split('T')[0]),
+                    end: formatDate(dates[dates.length - 1].toISOString().split('T')[0])
+                };
+            }
+        }
+        return acc;
+    }, {});
+
     return (
         <div className="max-w-6xl mx-auto px-4 py-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -227,7 +249,14 @@ const Archive = () => {
                             >
                                 {expandedFolders[era] ? <ChevronDown className="w-5 h-5 text-github-text-secondary" /> : <ChevronRight className="w-5 h-5 text-github-text-secondary" />}
                                 <Folder className={`w-6 h-6 ${expandedFolders[era] ? 'text-github-accent' : 'text-github-text-secondary'}`} />
-                                <span className="font-bold text-github-text">{era}</span>
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-github-text">{era}</span>
+                                    {eraDates[era] && (
+                                        <span className="text-[10px] text-github-text-secondary font-mono opacity-70">
+                                            [{eraDates[era].start} — {eraDates[era].end}]
+                                        </span>
+                                    )}
+                                </div>
                                 <span className="ml-auto text-xs text-github-text-secondary bg-github-border/30 px-2 py-0.5 rounded-full">
                                     {Object.values(groupedSongs[era]).flat().length} items
                                 </span>
